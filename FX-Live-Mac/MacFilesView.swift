@@ -2,7 +2,7 @@
 //  MacFilesView.swift
 //  FX-Live-Mac
 //
-//  Native macOS file management with drag-and-drop from Finder
+//  Native macOS file management with drag-and-drop, rename, file info
 //
 
 import SwiftUI
@@ -12,6 +12,10 @@ struct MacFilesView: View {
     @State private var audioFiles: [String] = []
     @State private var searchText = ""
     @State private var isDragOver = false
+    @State private var showingRenameAlert = false
+    @State private var renameText = ""
+    @State private var fileToRename = ""
+    @State private var previewingFile = ""
     
     var filteredFiles: [String] {
         if searchText.isEmpty {
@@ -47,6 +51,14 @@ struct MacFilesView: View {
                     .foregroundColor(.secondary)
                 TextField("Search files...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
+                
+                if previewingFile != "" {
+                    Button(action: { stopPreview() }) {
+                        Image(systemName: "stop.fill")
+                            .foregroundColor(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
@@ -57,23 +69,42 @@ struct MacFilesView: View {
             List(filteredFiles, id: \.self) { file in
                 HStack {
                     Image(systemName: "waveform")
-                        .foregroundColor(.blue)
+                        .foregroundColor(previewingFile == file ? .green : .blue)
                     
                     VStack(alignment: .leading) {
                         Text(file)
                             .font(.body)
+                            .fontWeight(previewingFile == file ? .bold : .regular)
                         
-                        let ext = (file as NSString).pathExtension.uppercased()
-                        Text(ext)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack {
+                            let ext = (file as NSString).pathExtension.uppercased()
+                            Text(ext)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            // File size
+                            Text(fileSizeString(file))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
                     Spacer()
                     
                     // Preview button
                     Button(action: { previewFile(file) }) {
-                        Image(systemName: "play.circle")
+                        Image(systemName: previewingFile == file ? "speaker.wave.2.fill" : "play.circle")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(previewingFile == file ? .green : .primary)
+                    
+                    // Rename button
+                    Button(action: {
+                        fileToRename = file
+                        renameText = (file as NSString).deletingPathExtension
+                        showingRenameAlert = true
+                    }) {
+                        Image(systemName: "pencil")
                     }
                     .buttonStyle(.plain)
                     
@@ -114,6 +145,13 @@ struct MacFilesView: View {
                 return true
             }
         }
+        .alert("Rename File", isPresented: $showingRenameAlert) {
+            TextField("New name", text: $renameText)
+            Button("Cancel", role: .cancel) { }
+            Button("Rename") { renameFile() }
+        } message: {
+            Text("Enter a new name for the file")
+        }
         .onAppear {
             loadFiles()
         }
@@ -143,27 +181,70 @@ struct MacFilesView: View {
     }
     
     private func copyFileToDocuments(_ url: URL) {
-        let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        let destination = URL(fileURLWithPath: documentsPath).appendingPathComponent(url.lastPathComponent)
-        try? FileManager.default.copyItem(at: url, to: destination)
+        let destination = URL(fileURLWithPath: documentsPath(url.lastPathComponent))
+        if !FileManager.default.fileExists(atPath: destination.path) {
+            try? FileManager.default.copyItem(at: url, to: destination)
+        }
     }
     
     private func previewFile(_ file: String) {
-        let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        let path = (documentsPath as NSString).appendingPathComponent(file)
+        let path = documentsPath(file)
         
         if fx.previewStream > 0 {
             fx.audio.stop(fx.previewStream)
         }
+        
+        if previewingFile == file {
+            previewingFile = ""
+            return
+        }
+        
         fx.previewStream = fx.audio.loadPreview(path)
         fx.audio.play(fx.previewStream)
+        previewingFile = file
+    }
+    
+    private func stopPreview() {
+        if fx.previewStream > 0 {
+            fx.audio.stop(fx.previewStream)
+        }
+        previewingFile = ""
     }
     
     private func deleteFile(_ file: String) {
-        let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        let path = (documentsPath as NSString).appendingPathComponent(file)
+        let path = documentsPath(file)
         fx.audio.myDeleteFile(path)
+        if previewingFile == file { previewingFile = "" }
         loadFiles()
+    }
+    
+    private func renameFile() {
+        guard !renameText.isEmpty, !fileToRename.isEmpty else { return }
+        let ext = (fileToRename as NSString).pathExtension
+        let newName = renameText.appending(".\(ext)")
+        let oldPath = documentsPath(fileToRename)
+        let newPath = documentsPath(newName)
+        
+        do {
+            try FileManager.default.moveItem(atPath: oldPath, toPath: newPath)
+            loadFiles()
+        } catch {
+            print("Rename error: \(error)")
+        }
+    }
+    
+    private func fileSizeString(_ file: String) -> String {
+        let path = documentsPath(file)
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let size = attrs[.size] as? UInt64 else { return "" }
+        
+        if size < 1024 {
+            return "\(size) B"
+        } else if size < 1024 * 1024 {
+            return String(format: "%.1f KB", Double(size) / 1024.0)
+        } else {
+            return String(format: "%.1f MB", Double(size) / (1024.0 * 1024.0))
+        }
     }
     
     private func handleDrop(_ providers: [NSItemProvider]) {

@@ -2,7 +2,7 @@
 //  MacPerformView.swift
 //  FX-Live-Mac
 //
-//  Native macOS Perform screen with keyboard shortcuts and larger layout
+//  Native macOS Perform screen with keyboard shortcuts, auto-follow, spot effects
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ struct MacPerformView: View {
     
     var body: some View {
         HSplitView {
-            // Left: Cue list
+            // Left: Cue list + info
             VStack(spacing: 0) {
                 // Current Cue
                 VStack(alignment: .leading, spacing: 4) {
@@ -52,10 +52,13 @@ struct MacPerformView: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
-                    Text(viewModel.currentCueNotes.isEmpty ? "No notes" : viewModel.currentCueNotes)
-                        .font(.body)
-                        .foregroundColor(viewModel.currentCueNotes.isEmpty ? .secondary : .primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ScrollView {
+                        Text(viewModel.currentCueNotes.isEmpty ? "No notes" : viewModel.currentCueNotes)
+                            .font(.body)
+                            .foregroundColor(viewModel.currentCueNotes.isEmpty ? .secondary : .primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 60)
                 }
                 .padding(12)
                 .padding(.horizontal, 8)
@@ -63,46 +66,55 @@ struct MacPerformView: View {
                 Divider()
                 
                 // Cue List
-                List(Array(viewModel.cues.enumerated()), id: \.offset) { index, cue in
-                    HStack {
-                        Text("\(index + 1)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(width: 30)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(cue.getName())
-                                .font(.body)
-                                .fontWeight(viewModel.isActiveCue(index) ? .bold : .regular)
+                ScrollViewReader { proxy in
+                    List(Array(viewModel.cues.enumerated()), id: \.offset) { index, cue in
+                        HStack {
+                            Text("\(index + 1)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.secondary)
+                                .frame(width: 30)
                             
-                            HStack {
-                                Text(viewModel.formatSeconds(cue.duration()))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                if cue.autoFollow {
-                                    Text("Auto")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(cue.getName())
+                                    .font(.body)
+                                    .fontWeight(viewModel.isActiveCue(index) ? .bold : .regular)
+                                
+                                HStack {
+                                    Text(viewModel.formatDuration(cue.duration()))
                                         .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.secondary)
+                                    if cue.autoFollow {
+                                        Text("Auto")
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.orange)
+                                    }
                                 }
                             }
                         }
+                        .listRowBackground(
+                            viewModel.isActiveCue(index) ? Color.green.opacity(0.3) :
+                            viewModel.isNextCue(index) ? Color.yellow.opacity(0.3) :
+                            Color.clear
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.selectCue(at: index)
+                        }
+                        .id(index)
                     }
-                    .listRowBackground(
-                        viewModel.isActiveCue(index) ? Color.green.opacity(0.3) :
-                        viewModel.isNextCue(index) ? Color.yellow.opacity(0.3) :
-                        Color.clear
-                    )
-                    .onTapGesture {
-                        viewModel.selectCue(at: index)
+                    .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .onReceive(viewModel.$activeCueIndex) { newIndex in
+                        if let idx = newIndex, idx >= 0 {
+                            withAnimation { proxy.scrollTo(idx, anchor: .center) }
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
             .frame(minWidth: 280, maxWidth: 400)
             
             // Right: Controls and active effects
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 // GO Button
                 Button(action: { viewModel.go() }) {
                     HStack(spacing: 12) {
@@ -122,6 +134,45 @@ struct MacPerformView: View {
                 .buttonStyle(.plain)
                 .keyboardShortcut(.space, modifiers: [])
                 .padding(.horizontal)
+                
+                // Auto-follow countdown
+                if viewModel.isAutoFollowActive {
+                    HStack {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(.red)
+                        Text(viewModel.autoFollowCountdown)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundColor(.red)
+                        Text("Auto-follow active")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.1)))
+                    .padding(.horizontal)
+                }
+                
+                // Spot Effects (if current cue has them)
+                if !viewModel.spotEffects.isEmpty {
+                    GroupBox("Spot Effects") {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                            ForEach(Array(viewModel.spotEffects.enumerated()), id: \.offset) { index, effect in
+                                Button(action: { viewModel.playSpotEffect(at: index) }) {
+                                    Text(effect.name)
+                                        .font(.caption)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.7)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 40)
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                        .padding(4)
+                    }
+                    .padding(.horizontal)
+                }
                 
                 // Transport Controls
                 HStack(spacing: 12) {
@@ -162,7 +213,7 @@ struct MacPerformView: View {
                 Divider()
                 
                 // Active Effects
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("ACTIVE EFFECTS")
                         .font(.caption)
                         .fontWeight(.semibold)
@@ -181,12 +232,16 @@ struct MacPerformView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        List(viewModel.activeEffects, id: \.id) { effect in
-                            MacActiveEffectRow(effect: effect, onStop: {
-                                effect.stop()
-                            })
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach(viewModel.activeEffects, id: \.id) { effect in
+                                    MacActiveEffectRow(effect: effect, onStop: {
+                                        effect.stop()
+                                    })
+                                    .padding(.horizontal)
+                                }
+                            }
                         }
-                        .listStyle(.inset(alternatesRowBackgrounds: true))
                     }
                 }
             }
@@ -204,35 +259,92 @@ struct MacActiveEffectRow: View {
     let onStop: () -> Void
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(effect.name)
-                    .font(.body)
-                Text(effect.status)
+        VStack(spacing: 6) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(effect.name)
+                        .font(.body)
+                        .fontWeight(.medium)
+                    Text(effect.status)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Counter
+                Text(formattedCounter)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(counterColor.opacity(0.2))
+                    )
+                    .foregroundColor(counterColor)
+                
+                Button(action: onStop) {
+                    Image(systemName: "stop.fill")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // Progress bar
+            if effect.type == fx.TYPE_AUDIO {
+                let duration = max(1, Double(effect.getDuration()))
+                let position = min(max(0, Double(effect.getPosition())), duration)
+                ProgressView(value: position, total: duration)
+                    .tint(.blue)
+            }
+            
+            // Volume slider
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Slider(value: Binding(
+                    get: {
+                        if effect.stream >= 0 {
+                            return Double(fx.audio.getLevel(effect.stream))
+                        }
+                        return Double(effect.currentVolume)
+                    },
+                    set: { newValue in
+                        effect.currentVolume = Float(newValue)
+                        fx.audio.setLevel(effect.stream, level: Float(newValue))
+                        if !settings.performanceMode {
+                            effect.level = Float(newValue)
+                        }
+                    }
+                ), in: 0...2)
+                .tint(effect.currentVolume > 1.0 ? .orange : .blue)
+                Image(systemName: "speaker.wave.3.fill")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            Text(effect.getCounter())
-                .font(.body.monospacedDigit())
-            
-            Slider(value: Binding(
-                get: { Double(effect.currentVolume) },
-                set: { effect.currentVolume = Float($0)
-                    fx.audio.setLevel(effect.stream, level: Float($0))
-                }
-            ), in: 0...2)
-            .frame(width: 120)
-            
-            Button(action: onStop) {
-                Image(systemName: "stop.fill")
-                    .foregroundColor(.red)
-            }
-            .buttonStyle(.plain)
         }
-        .padding(.vertical, 4)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+    }
+    
+    private var formattedCounter: String {
+        let raw = effect.getCounter()
+        let clean = raw.hasPrefix("-") ? "00:00" : raw
+        let parts = clean.split(separator: ":")
+        guard parts.count >= 2 else { return "00:00" }
+        let mins = Int(parts[0]) ?? 0
+        let secsStr = String(parts[1]).split(separator: ".").first.map(String.init) ?? "0"
+        let secs = Int(secsStr) ?? 0
+        let total = max(0, mins * 60 + secs)
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+    
+    private var counterColor: Color {
+        if effect.getRemaining() < Float(settings.countDownWarning) && !effect.loop {
+            return .red
+        }
+        return .primary
     }
 }
 
@@ -242,6 +354,7 @@ struct MacActiveEffectRow: View {
 class MacPerformViewModel: ObservableObject {
     @Published var cues: [FxCue] = []
     @Published var activeEffects: [FxEffect] = []
+    @Published var spotEffects: [FxEffect] = []
     @Published var currentCueName = ""
     @Published var currentCueNotes = ""
     @Published var nextCueName = ""
@@ -278,7 +391,11 @@ class MacPerformViewModel: ObservableObject {
         if fx.show.currentVersion.activeCueNo >= 0 && fx.show.currentVersion.activeCueNo < cues.count {
             let currentCue = fx.show.currentVersion.getCue(fx.show.currentVersion.activeCueNo)
             currentCueName = currentCue.getName()
-            activeCueIndex = fx.show.currentVersion.activeCueNo
+            let newIdx = fx.show.currentVersion.activeCueNo
+            if activeCueIndex != newIdx { activeCueIndex = newIdx }
+            spotEffects = currentCue.spotEffects
+            
+            checkAutoFollow(currentCue: currentCue)
         }
         
         if fx.show.currentVersion.nextCueNo >= 0 && fx.show.currentVersion.nextCueNo < cues.count {
@@ -291,7 +408,53 @@ class MacPerformViewModel: ObservableObject {
         isPaused = fx.paused
     }
     
-    func formatSeconds(_ seconds: Float) -> String {
+    private func checkAutoFollow(currentCue: FxCue) {
+        if fx.autoFollowActive && !fx.emergencyStopActive {
+            let elapsed = CACurrentMediaTime() - fx.autoFollowStart
+            let remaining = Double(currentCue.autoFollowDelay) - elapsed
+            
+            if remaining > 0 {
+                isAutoFollowActive = true
+                autoFollowCountdown = formatDuration(Float(remaining))
+            } else {
+                autoFollowCountdown = "00:00"
+                isAutoFollowActive = false
+                fx.autoFollowActive = false
+                currentCue.allowAutoFollow = false
+                go()
+            }
+        } else if currentCue.allowAutoFollow && currentCue.autoFollow && currentCue.autoFollowEnd {
+            if fx.activeEffects.count == 0 && !fx.emergencyStopActive {
+                if !fx.autoFollowActive {
+                    fx.autoFollowActive = true
+                    fx.autoFollowStart = CACurrentMediaTime()
+                }
+                
+                let elapsed = CACurrentMediaTime() - fx.autoFollowStart
+                let remaining = Double(currentCue.autoFollowDelay) - elapsed
+                
+                if remaining > 0 {
+                    isAutoFollowActive = true
+                    autoFollowCountdown = formatDuration(Float(remaining))
+                } else {
+                    autoFollowCountdown = "00:00"
+                    isAutoFollowActive = false
+                    fx.autoFollowActive = false
+                    currentCue.allowAutoFollow = false
+                    go()
+                }
+            } else {
+                if isAutoFollowActive { isAutoFollowActive = false }
+            }
+        } else {
+            if isAutoFollowActive {
+                isAutoFollowActive = false
+                autoFollowCountdown = ""
+            }
+        }
+    }
+    
+    func formatDuration(_ seconds: Float) -> String {
         let mins = Int(seconds) / 60
         let secs = Int(seconds) % 60
         return String(format: "%02d:%02d", mins, secs)
@@ -299,14 +462,44 @@ class MacPerformViewModel: ObservableObject {
     
     func isActiveCue(_ index: Int) -> Bool { index == activeCueIndex }
     func isNextCue(_ index: Int) -> Bool { index == nextCueIndex }
+    
     func selectCue(at index: Int) {
         fx.show.currentVersion.nextCueNo = index
         updateDisplay()
     }
     
     func go() {
+        let currentCue = fx.show.currentVersion.getCue(fx.show.currentVersion.activeCueNo)
+        
+        if fx.autoFollowActive || currentCue.allowAutoFollow {
+            fx.autoFollowActive = false
+            currentCue.allowAutoFollow = false
+            isAutoFollowActive = false
+            updateDisplay()
+            return
+        }
+        
         fx.show.currentVersion.Go()
+        
+        let newCue = fx.show.currentVersion.getCue(fx.show.currentVersion.activeCueNo)
+        if newCue.autoFollow && !newCue.autoFollowEnd {
+            fx.autoFollowActive = true
+            fx.autoFollowStart = CACurrentMediaTime()
+            newCue.allowAutoFollow = true
+            isAutoFollowActive = true
+        }
+        if newCue.autoFollow && newCue.autoFollowEnd {
+            newCue.allowAutoFollow = true
+            isAutoFollowActive = true
+        }
+        
         updateDisplay()
+    }
+    
+    func playSpotEffect(at index: Int) {
+        guard index < spotEffects.count else { return }
+        let spot = spotEffects[index].clone()
+        spot.spotPlay()
     }
     
     func pauseAll() {

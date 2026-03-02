@@ -7,6 +7,7 @@
     objects = {
 
 /* Begin PBXBuildFile section */
+		B20001AA /* MacShowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20001AB /* MacShowManager.swift */; };
         A10001AA /* FX_Live_MacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001AB /* FX_Live_MacApp.swift */; };
         A10002AA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002AB /* ContentView.swift */; };
         A10003AA /* MacShowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003AB /* MacShowsView.swift */; };
@@ -24,7 +25,7 @@
         A10017AA /* FxEQ.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10017AB /* FxEQ.swift */; };
         A10018AA /* FxDSP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10018AB /* FxDSP.swift */; };
         A10019AA /* propertyAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10019AB /* propertyAnimation.swift */; };
-        A10020AA /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10020AC /* Utils.swift */; };
+        A10010AA /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10010AB /* Utils.swift */; };
         A10021AA /* audioEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = A10021AB /* audioEngine.m */; };
         A10022AA /* EQSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = A10022AB /* EQSettings.m */; };
         A10023AA /* DSPSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = A10023AB /* DSPSettings.m */; };
@@ -42,9 +43,76 @@
         A10046AA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10046AB /* StoreKit.framework */; };
         A10047AA /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10047AB /* MultipeerConnectivity.framework */; };
         A10048AA /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A10048AB /* libz.tbd */; };
+        A10060AA /* libbass.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10060AB /* libbass.dylib */; };
+        A10061AA /* libbass_fx.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10061AB /* libbass_fx.dylib */; };
+        A10062AA /* libbassenc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10062AB /* libbassenc.dylib */; };
+        A10063AA /* libbassmidi.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10063AB /* libbassmidi.dylib */; };
+        A10064AA /* libbassmix.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10064AB /* libbassmix.dylib */; };
+        A10060BA /* libbass.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10060AB /* libbass.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+        A10061BA /* libbass_fx.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10061AB /* libbass_fx.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+        A10062BA /* libbassenc.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10062AB /* libbassenc.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+        A10063BA /* libbassmidi.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10063AB /* libbassmidi.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+        A10064BA /* libbassmix.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10064AB /* libbassmix.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+        A1D000AA /* Banging on door.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D000AB /* Banging on door.m4a */; };
+        A1D001AA /* Cell door close.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D001AB /* Cell door close.m4a */; };
+        A1D002AA /* Cell door open.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D002AB /* Cell door open.m4a */; };
+        A1D003AA /* Clock Chime 10.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D003AB /* Clock Chime 10.m4a */; };
+        A1D004AA /* Demo Show.fxLive in Resources */ = {isa = PBXBuildFile; fileRef = A1D004AB /* Demo Show.fxLive */; };
+        A1D005AA /* Door bell.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D005AB /* Door bell.m4a */; };
+        A1D006AA /* Door slam.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D006AB /* Door slam.m4a */; };
+        A1D007AA /* Drain clang.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D007AB /* Drain clang.m4a */; };
+        A1D008AA /* Heavy door open and close.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D008AB /* Heavy door open and close.m4a */; };
+        A1D009AA /* Heavy rain and distant thunder.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D009AB /* Heavy rain and distant thunder.m4a */; };
+        A1D010AA /* LineUp Tone.aif in Resources */ = {isa = PBXBuildFile; fileRef = A1D010AB /* LineUp Tone.aif */; };
+        A1D011AA /* Music - Drifter 1.3.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D011AB /* Music - Drifter 1.3.m4a */; };
+        A1D012AA /* Music - Ominous bed build.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D012AB /* Music - Ominous bed build.m4a */; };
+        A1D013AA /* Music - Synth electro bed.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D013AB /* Music - Synth electro bed.m4a */; };
+        A1D014AA /* Music - Year Less.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D014AB /* Music - Year Less.m4a */; };
+        A1D015AA /* Piano - Angels.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D015AB /* Piano - Angels.m4a */; };
+        A1D016AA /* Piano - Autumn Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D016AB /* Piano - Autumn Rain.m4a */; };
+        A1D017AA /* Piano - Hope.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D017AB /* Piano - Hope.m4a */; };
+        A1D018AA /* Piano - London.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D018AB /* Piano - London.m4a */; };
+        A1D019AA /* Piano - Reflections.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D019AB /* Piano - Reflections.m4a */; };
+        A1D020AA /* Piano - Sandpit.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D020AB /* Piano - Sandpit.m4a */; };
+        A1D021AA /* Piano - The Birds.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D021AB /* Piano - The Birds.m4a */; };
+        A1D022AA /* Pistol Shot - Close perspective.aif in Resources */ = {isa = PBXBuildFile; fileRef = A1D022AB /* Pistol Shot - Close perspective.aif */; };
+        A1D023AA /* Police Siren.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D023AB /* Police Siren.m4a */; };
+        A1D024AA /* Seagulls with distant waves.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D024AB /* Seagulls with distant waves.m4a */; };
+        A1D025AA /* Seawash on shore.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D025AB /* Seawash on shore.m4a */; };
+        A1D026AA /* Sewer int soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D026AB /* Sewer int soundscape.m4a */; };
+        A1D027AA /* Silence.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D027AB /* Silence.m4a */; };
+        A1D028AA /* Thunder Clap Kick Big.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D028AB /* Thunder Clap Kick Big.m4a */; };
+        A1D029AA /* Thunder Clap Sharp Big.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D029AB /* Thunder Clap Sharp Big.m4a */; };
+        A1D030AA /* Thunder.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D030AB /* Thunder.m4a */; };
+        A1D031AA /* Village ext soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D031AB /* Village ext soundscape.m4a */; };
+        A1D032AA /* busy London street scene 1900 soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D032AB /* busy London street scene 1900 soundscape.m4a */; };
+        A1D033AA /* busy market close perpective.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D033AB /* busy market close perpective.m4a */; };
+        A1D034AA /* jail  - soundscape shouts etc.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D034AB /* jail  - soundscape shouts etc.m4a */; };
+        A1D035AA /* old shop bell.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D035AB /* old shop bell.m4a */; };
+        A1D036AA /* police whistle.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D036AB /* police whistle.m4a */; };
+        A1D037AA /* single bell tolls.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D037AB /* single bell tolls.m4a */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+        A1E00001 /* Embed Libraries */ = {
+            isa = PBXCopyFilesBuildPhase;
+            buildActionMask = 2147483647;
+            dstPath = "";
+            dstSubfolderSpec = 10;
+            files = (
+                A10060BA /* libbass.dylib in Embed Libraries */,
+                A10061BA /* libbass_fx.dylib in Embed Libraries */,
+                A10062BA /* libbassenc.dylib in Embed Libraries */,
+                A10063BA /* libbassmidi.dylib in Embed Libraries */,
+                A10064BA /* libbassmix.dylib in Embed Libraries */,
+            );
+            name = "Embed Libraries";
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		B20001AB /* MacShowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacShowManager.swift; sourceTree = "<group>"; };
         A10000AA /* FX-Live-Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FX-Live-Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
         A10001AB /* FX_Live_MacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FX_Live_MacApp.swift; sourceTree = "<group>"; };
         A10002AB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -64,7 +132,7 @@
         A10017AB /* FxEQ.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxEQ.swift; path = "../FX-Live2/FX-Live2/FxEQ.swift"; sourceTree = "<group>"; };
         A10018AB /* FxDSP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxDSP.swift; path = "../FX-Live2/FX-Live2/FxDSP.swift"; sourceTree = "<group>"; };
         A10019AB /* propertyAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = propertyAnimation.swift; path = "../FX-Live2/FX-Live2/propertyAnimation.swift"; sourceTree = "<group>"; };
-        A10020AC /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Utils.swift; path = "../FX-Live2/FX-Live2/Utils.swift"; sourceTree = "<group>"; };
+        A10010AB /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Utils.swift; path = "../FX-Live2/FX-Live2/Utils.swift"; sourceTree = "<group>"; };
         A10020AB /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AudioEngine.h; path = "../FX-Live2/FX-Live2/AudioEngine.h"; sourceTree = "<group>"; };
         A10021AB /* audioEngine.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = audioEngine.m; path = "../FX-Live2/FX-Live2/audioEngine.m"; sourceTree = "<group>"; };
         A10022AB /* EQSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = EQSettings.m; path = "../FX-Live2/FX-Live2/EQSettings.m"; sourceTree = "<group>"; };
@@ -96,6 +164,49 @@
         A10046AB /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
         A10047AB /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
         A10048AB /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+        A10060AB /* libbass.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbass.dylib; path = libs/libbass.dylib; sourceTree = "<group>"; };
+        A10061AB /* libbass_fx.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbass_fx.dylib; path = libs/libbass_fx.dylib; sourceTree = "<group>"; };
+        A10062AB /* libbassenc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassenc.dylib; path = libs/libbassenc.dylib; sourceTree = "<group>"; };
+        A10063AB /* libbassmidi.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassmidi.dylib; path = libs/libbassmidi.dylib; sourceTree = "<group>"; };
+        A10064AB /* libbassmix.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassmix.dylib; path = libs/libbassmix.dylib; sourceTree = "<group>"; };
+        A1D000AB /* Banging on door.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Banging on door.m4a"; sourceTree = "<group>"; };
+        A1D001AB /* Cell door close.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Cell door close.m4a"; sourceTree = "<group>"; };
+        A1D002AB /* Cell door open.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Cell door open.m4a"; sourceTree = "<group>"; };
+        A1D003AB /* Clock Chime 10.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Clock Chime 10.m4a"; sourceTree = "<group>"; };
+        A1D004AB /* Demo Show.fxLive */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Demo Show.fxLive"; sourceTree = "<group>"; };
+        A1D005AB /* Door bell.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Door bell.m4a"; sourceTree = "<group>"; };
+        A1D006AB /* Door slam.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Door slam.m4a"; sourceTree = "<group>"; };
+        A1D007AB /* Drain clang.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Drain clang.m4a"; sourceTree = "<group>"; };
+        A1D008AB /* Heavy door open and close.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Heavy door open and close.m4a"; sourceTree = "<group>"; };
+        A1D009AB /* Heavy rain and distant thunder.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Heavy rain and distant thunder.m4a"; sourceTree = "<group>"; };
+        A1D010AB /* LineUp Tone.aif */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = "LineUp Tone.aif"; sourceTree = "<group>"; };
+        A1D011AB /* Music - Drifter 1.3.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Drifter 1.3.m4a"; sourceTree = "<group>"; };
+        A1D012AB /* Music - Ominous bed build.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Ominous bed build.m4a"; sourceTree = "<group>"; };
+        A1D013AB /* Music - Synth electro bed.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Synth electro bed.m4a"; sourceTree = "<group>"; };
+        A1D014AB /* Music - Year Less.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Year Less.m4a"; sourceTree = "<group>"; };
+        A1D015AB /* Piano - Angels.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Angels.m4a"; sourceTree = "<group>"; };
+        A1D016AB /* Piano - Autumn Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Autumn Rain.m4a"; sourceTree = "<group>"; };
+        A1D017AB /* Piano - Hope.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Hope.m4a"; sourceTree = "<group>"; };
+        A1D018AB /* Piano - London.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - London.m4a"; sourceTree = "<group>"; };
+        A1D019AB /* Piano - Reflections.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Reflections.m4a"; sourceTree = "<group>"; };
+        A1D020AB /* Piano - Sandpit.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Sandpit.m4a"; sourceTree = "<group>"; };
+        A1D021AB /* Piano - The Birds.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - The Birds.m4a"; sourceTree = "<group>"; };
+        A1D022AB /* Pistol Shot - Close perspective.aif */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = "Pistol Shot - Close perspective.aif"; sourceTree = "<group>"; };
+        A1D023AB /* Police Siren.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Police Siren.m4a"; sourceTree = "<group>"; };
+        A1D024AB /* Seagulls with distant waves.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Seagulls with distant waves.m4a"; sourceTree = "<group>"; };
+        A1D025AB /* Seawash on shore.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Seawash on shore.m4a"; sourceTree = "<group>"; };
+        A1D026AB /* Sewer int soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Sewer int soundscape.m4a"; sourceTree = "<group>"; };
+        A1D027AB /* Silence.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Silence.m4a"; sourceTree = "<group>"; };
+        A1D028AB /* Thunder Clap Kick Big.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Thunder Clap Kick Big.m4a"; sourceTree = "<group>"; };
+        A1D029AB /* Thunder Clap Sharp Big.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Thunder Clap Sharp Big.m4a"; sourceTree = "<group>"; };
+        A1D030AB /* Thunder.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Thunder.m4a"; sourceTree = "<group>"; };
+        A1D031AB /* Village ext soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Village ext soundscape.m4a"; sourceTree = "<group>"; };
+        A1D032AB /* busy London street scene 1900 soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "busy London street scene 1900 soundscape.m4a"; sourceTree = "<group>"; };
+        A1D033AB /* busy market close perpective.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "busy market close perpective.m4a"; sourceTree = "<group>"; };
+        A1D034AB /* jail  - soundscape shouts etc.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "jail  - soundscape shouts etc.m4a"; sourceTree = "<group>"; };
+        A1D035AB /* old shop bell.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "old shop bell.m4a"; sourceTree = "<group>"; };
+        A1D036AB /* police whistle.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "police whistle.m4a"; sourceTree = "<group>"; };
+        A1D037AB /* single bell tolls.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "single bell tolls.m4a"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +222,11 @@
                 A10046AA /* StoreKit.framework in Frameworks */,
                 A10047AA /* MultipeerConnectivity.framework in Frameworks */,
                 A10048AA /* libz.tbd in Frameworks */,
+                A10060AA /* libbass.dylib in Frameworks */,
+                A10061AA /* libbass_fx.dylib in Frameworks */,
+                A10062AA /* libbassenc.dylib in Frameworks */,
+                A10063AA /* libbassmidi.dylib in Frameworks */,
+                A10064AA /* libbassmix.dylib in Frameworks */,
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
@@ -141,6 +257,8 @@
                 A10007AB /* MacFilesView.swift */,
                 A10008AB /* MacSettingsView.swift */,
                 A10009AB /* FX-Live-Mac-Bridging-Header.h */,
+                B20001AB /* MacShowManager.swift */,
+                A1G00008 /* DemoResources */,
             );
             path = "FX-Live-Mac";
             sourceTree = "<group>";
@@ -157,7 +275,7 @@
                 A10017AB /* FxEQ.swift */,
                 A10018AB /* FxDSP.swift */,
                 A10019AB /* propertyAnimation.swift */,
-                A10020AC /* Utils.swift */,
+                A10010AB /* Utils.swift */,
                 A10020AB /* AudioEngine.h */,
                 A10021AB /* audioEngine.m */,
                 A10022AC /* EQSettings.h */,
@@ -210,6 +328,11 @@
                 A10046AB /* StoreKit.framework */,
                 A10047AB /* MultipeerConnectivity.framework */,
                 A10048AB /* libz.tbd */,
+                A10060AB /* libbass.dylib */,
+                A10061AB /* libbass_fx.dylib */,
+                A10062AB /* libbassenc.dylib */,
+                A10063AB /* libbassmidi.dylib */,
+                A10064AB /* libbassmix.dylib */,
             );
             name = Frameworks;
             sourceTree = "<group>";
@@ -222,6 +345,51 @@
             name = Products;
             sourceTree = "<group>";
         };
+        A1G00008 /* DemoResources */ = {
+            isa = PBXGroup;
+            children = (
+                A1D000AB /* Banging on door.m4a */,
+                A1D001AB /* Cell door close.m4a */,
+                A1D002AB /* Cell door open.m4a */,
+                A1D003AB /* Clock Chime 10.m4a */,
+                A1D004AB /* Demo Show.fxLive */,
+                A1D005AB /* Door bell.m4a */,
+                A1D006AB /* Door slam.m4a */,
+                A1D007AB /* Drain clang.m4a */,
+                A1D008AB /* Heavy door open and close.m4a */,
+                A1D009AB /* Heavy rain and distant thunder.m4a */,
+                A1D010AB /* LineUp Tone.aif */,
+                A1D011AB /* Music - Drifter 1.3.m4a */,
+                A1D012AB /* Music - Ominous bed build.m4a */,
+                A1D013AB /* Music - Synth electro bed.m4a */,
+                A1D014AB /* Music - Year Less.m4a */,
+                A1D015AB /* Piano - Angels.m4a */,
+                A1D016AB /* Piano - Autumn Rain.m4a */,
+                A1D017AB /* Piano - Hope.m4a */,
+                A1D018AB /* Piano - London.m4a */,
+                A1D019AB /* Piano - Reflections.m4a */,
+                A1D020AB /* Piano - Sandpit.m4a */,
+                A1D021AB /* Piano - The Birds.m4a */,
+                A1D022AB /* Pistol Shot - Close perspective.aif */,
+                A1D023AB /* Police Siren.m4a */,
+                A1D024AB /* Seagulls with distant waves.m4a */,
+                A1D025AB /* Seawash on shore.m4a */,
+                A1D026AB /* Sewer int soundscape.m4a */,
+                A1D027AB /* Silence.m4a */,
+                A1D028AB /* Thunder Clap Kick Big.m4a */,
+                A1D029AB /* Thunder Clap Sharp Big.m4a */,
+                A1D030AB /* Thunder.m4a */,
+                A1D031AB /* Village ext soundscape.m4a */,
+                A1D032AB /* busy London street scene 1900 soundscape.m4a */,
+                A1D033AB /* busy market close perpective.m4a */,
+                A1D034AB /* jail  - soundscape shouts etc.m4a */,
+                A1D035AB /* old shop bell.m4a */,
+                A1D036AB /* police whistle.m4a */,
+                A1D037AB /* single bell tolls.m4a */,
+            );
+            path = DemoResources;
+            sourceTree = "<group>";
+        };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -232,6 +400,7 @@
                 A1S00001 /* Sources */,
                 A1F00001 /* Frameworks */,
                 A1R00001 /* Resources */,
+                A1E00001 /* Embed Libraries */,
             );
             buildRules = (
             );
@@ -280,6 +449,44 @@
             isa = PBXResourcesBuildPhase;
             buildActionMask = 2147483647;
             files = (
+                A1D000AA /* Banging on door.m4a in Resources */,
+                A1D001AA /* Cell door close.m4a in Resources */,
+                A1D002AA /* Cell door open.m4a in Resources */,
+                A1D003AA /* Clock Chime 10.m4a in Resources */,
+                A1D004AA /* Demo Show.fxLive in Resources */,
+                A1D005AA /* Door bell.m4a in Resources */,
+                A1D006AA /* Door slam.m4a in Resources */,
+                A1D007AA /* Drain clang.m4a in Resources */,
+                A1D008AA /* Heavy door open and close.m4a in Resources */,
+                A1D009AA /* Heavy rain and distant thunder.m4a in Resources */,
+                A1D010AA /* LineUp Tone.aif in Resources */,
+                A1D011AA /* Music - Drifter 1.3.m4a in Resources */,
+                A1D012AA /* Music - Ominous bed build.m4a in Resources */,
+                A1D013AA /* Music - Synth electro bed.m4a in Resources */,
+                A1D014AA /* Music - Year Less.m4a in Resources */,
+                A1D015AA /* Piano - Angels.m4a in Resources */,
+                A1D016AA /* Piano - Autumn Rain.m4a in Resources */,
+                A1D017AA /* Piano - Hope.m4a in Resources */,
+                A1D018AA /* Piano - London.m4a in Resources */,
+                A1D019AA /* Piano - Reflections.m4a in Resources */,
+                A1D020AA /* Piano - Sandpit.m4a in Resources */,
+                A1D021AA /* Piano - The Birds.m4a in Resources */,
+                A1D022AA /* Pistol Shot - Close perspective.aif in Resources */,
+                A1D023AA /* Police Siren.m4a in Resources */,
+                A1D024AA /* Seagulls with distant waves.m4a in Resources */,
+                A1D025AA /* Seawash on shore.m4a in Resources */,
+                A1D026AA /* Sewer int soundscape.m4a in Resources */,
+                A1D027AA /* Silence.m4a in Resources */,
+                A1D028AA /* Thunder Clap Kick Big.m4a in Resources */,
+                A1D029AA /* Thunder Clap Sharp Big.m4a in Resources */,
+                A1D030AA /* Thunder.m4a in Resources */,
+                A1D031AA /* Village ext soundscape.m4a in Resources */,
+                A1D032AA /* busy London street scene 1900 soundscape.m4a in Resources */,
+                A1D033AA /* busy market close perpective.m4a in Resources */,
+                A1D034AA /* jail  - soundscape shouts etc.m4a in Resources */,
+                A1D035AA /* old shop bell.m4a in Resources */,
+                A1D036AA /* police whistle.m4a in Resources */,
+                A1D037AA /* single bell tolls.m4a in Resources */,
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
@@ -290,6 +497,7 @@
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
             files = (
+				B20001AA /* MacShowManager.swift in Sources */,
                 A10001AA /* FX_Live_MacApp.swift in Sources */,
                 A10002AA /* ContentView.swift in Sources */,
                 A10003AA /* MacShowsView.swift in Sources */,
@@ -307,7 +515,7 @@
                 A10017AA /* FxEQ.swift in Sources */,
                 A10018AA /* FxDSP.swift in Sources */,
                 A10019AA /* propertyAnimation.swift in Sources */,
-                A10020AA /* Utils.swift in Sources */,
+                A10010AA /* Utils.swift in Sources */,
                 A10021AA /* audioEngine.m in Sources */,
                 A10022AA /* EQSettings.m in Sources */,
                 A10023AA /* DSPSettings.m in Sources */,
@@ -457,8 +665,12 @@
                 HEADER_SEARCH_PATHS = (
                     "$(inherited)",
                     "\"$(SRCROOT)/../FX-Live2/FX-Live2\"",
-                    "\"$(SRCROOT)/../../FX-Live2\"",
+                    "\"$(SRCROOT)/../FX-Live2\"",
                     "\"$(SRCROOT)/../FX-Live2/minizip\"",
+                );
+                LIBRARY_SEARCH_PATHS = (
+                    "$(inherited)",
+                    "\"$(SRCROOT)/libs\"",
                 );
                 LD_RUNPATH_SEARCH_PATHS = (
                     "$(inherited)",
@@ -492,8 +704,12 @@
                 HEADER_SEARCH_PATHS = (
                     "$(inherited)",
                     "\"$(SRCROOT)/../FX-Live2/FX-Live2\"",
-                    "\"$(SRCROOT)/../../FX-Live2\"",
+                    "\"$(SRCROOT)/../FX-Live2\"",
                     "\"$(SRCROOT)/../FX-Live2/minizip\"",
+                );
+                LIBRARY_SEARCH_PATHS = (
+                    "$(inherited)",
+                    "\"$(SRCROOT)/libs\"",
                 );
                 LD_RUNPATH_SEARCH_PATHS = (
                     "$(inherited)",

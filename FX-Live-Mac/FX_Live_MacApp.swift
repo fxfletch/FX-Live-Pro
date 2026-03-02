@@ -15,8 +15,72 @@ struct FX_Live_MacApp: App {
         fx.audio.logLevels = settings.logLevels
         fx.audio.globalVolume(10000)
         
-        // Load settings
-        _ = settings.load()
+        // Initialize app - load settings or install demo on first run
+        initializeApp()
+    }
+    
+    /// Initialize the app by loading settings and the last used show
+    private func initializeApp() {
+        print("🚀 FX_Live_MacApp.initializeApp() starting")
+        let mgr = MacShowManager.shared
+        
+        // Load settings, or set defaults if first run
+        if settings.load() {
+            print("   ✅ Settings loaded - currentShow: '\(settings.currentShow)'")
+        } else {
+            print("   ⚠️ Settings not found - first time setup")
+            settings.buyUnlimited = true
+            settings.buyDSP = true
+            settings.buyMIDI = true
+            settings.buyMEDIA = true
+            settings.buyMEDIA2 = true
+            settings.firstTime = true
+            settings.logLevels = true
+            settings.save()
+        }
+        
+        // Migrate any existing files from ~/Documents/ (from before per-show folders)
+        mgr.migrateFromDocuments()
+        
+        // Ensure Demo Show is installed with all demo files
+        mgr.reinstallDemoIfNeeded()
+        
+        // Get available shows from folder structure
+        var showNames = mgr.allShowNames()
+        
+        // If still no shows, force demo install
+        if showNames.isEmpty {
+            print("   ⚠️ No shows found, forcing demo install")
+            mgr.setCurrentShow("Demo Show")
+            fx.install()
+            settings.currentShow = "Demo Show"
+            settings.save()
+            showNames = mgr.allShowNames()
+        }
+        
+        fx.showList = showNames
+        print("   📂 Available shows: \(showNames)")
+        
+        // Select the last used show (or first available)
+        if !settings.currentShow.isEmpty && showNames.contains(settings.currentShow) {
+            mgr.setCurrentShow(settings.currentShow)
+            fx.getLocalShows("")  // Populate mediaList from current show folder
+            fx.selectShow(settings.currentShow)
+            print("   ✅ Selected last used show: '\(settings.currentShow)'")
+        } else if let firstShow = showNames.first {
+            mgr.setCurrentShow(firstShow)
+            fx.getLocalShows("")
+            fx.selectShow(firstShow)
+            settings.currentShow = firstShow
+            settings.save()
+            print("   ✅ Fallback to first show: '\(firstShow)'")
+        } else {
+            print("   ⚠️ No shows available")
+        }
+        
+        print("   📋 fx.show.name: '\(fx.show.name)'")
+        print("   📋 fx.show.currentVersion.cues.count: \(fx.show.currentVersion.cues.count)")
+        print("🚀 FX_Live_MacApp.initializeApp() complete\n")
     }
     
     var body: some Scene {

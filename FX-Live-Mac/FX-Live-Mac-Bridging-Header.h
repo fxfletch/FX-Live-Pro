@@ -9,3 +9,7 @@
 #import "EQSettings.h"
 #import "DSPSettings.h"
 #import "SwiftTryCatch.h"
+
+// Function to set the show folder path from Swift, used by audioEngine.m
+void setMacOSShowFolder(NSString* _Nullable path);
+#import "SwiftTryCatch.h"

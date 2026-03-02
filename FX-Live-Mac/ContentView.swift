@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedTab: SidebarTab = .shows
-    @State private var showLoaded = false
+    @State private var selectedTab: SidebarTab = .perform
     
     enum SidebarTab: String, CaseIterable, Identifiable {
         case shows = "Shows"
@@ -17,6 +16,7 @@ struct ContentView: View {
         case perform = "Perform"
         case music = "Music"
         case files = "Files"
+        case settings = "Settings"
         
         var id: String { rawValue }
         
@@ -27,6 +27,7 @@ struct ContentView: View {
             case .perform: return "play.circle.fill"
             case .music: return "music.note.list"
             case .files: return "doc.fill"
+            case .settings: return "gearshape.fill"
             }
         }
     }
@@ -44,55 +45,21 @@ struct ContentView: View {
             Group {
                 switch selectedTab {
                 case .shows:
-                    MacShowsView(showLoaded: $showLoaded)
+                    MacShowsView()
                 case .design:
-                    if showLoaded {
-                        MacDesignView()
-                    } else {
-                        noShowLoadedView
-                    }
+                    MacDesignView()
                 case .perform:
-                    if showLoaded {
-                        MacPerformView()
-                    } else {
-                        noShowLoadedView
-                    }
+                    MacPerformView()
                 case .music:
-                    if showLoaded {
-                        MacMusicView()
-                    } else {
-                        noShowLoadedView
-                    }
+                    MacMusicView()
                 case .files:
                     MacFilesView()
+                case .settings:
+                    MacSettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .onAppear {
-            if settings.load() {
-                fx.selectShow(settings.currentShow)
-                showLoaded = true
-            }
-        }
-    }
-    
-    private var noShowLoadedView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "folder.badge.questionmark")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
-            Text("No Show Loaded")
-                .font(.title)
-                .foregroundColor(.secondary)
-            Text("Select a show from the Shows tab to get started")
-                .foregroundColor(.secondary.opacity(0.7))
-            Button("Go to Shows") {
-                selectedTab = .shows
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
