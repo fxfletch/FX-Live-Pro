@@ -83,8 +83,59 @@ struct MacMusicView: View {
                         .onTapGesture {
                             viewModel.selectTrack(at: index)
                         }
+                        .contextMenu {
+                            Button {
+                                viewModel.moveTrackUp(from: index)
+                            } label: {
+                                Label("Move Up", systemImage: "arrow.up")
+                            }
+                            .disabled(index == 0)
+                            
+                            Button {
+                                viewModel.moveTrackDown(from: index)
+                            } label: {
+                                Label("Move Down", systemImage: "arrow.down")
+                            }
+                            .disabled(index >= viewModel.tracks.count - 1)
+                            
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                viewModel.deleteTrack(at: index)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    
+                    Divider()
+                    
+                    // Playlist toolbar
+                    HStack(spacing: 8) {
+                        Button(action: { viewModel.moveCurrentTrackUp() }) {
+                            Image(systemName: "arrow.up")
+                        }
+                        .disabled(viewModel.currentTrackIndex <= 0)
+                        .help("Move Track Up")
+                        
+                        Button(action: { viewModel.moveCurrentTrackDown() }) {
+                            Image(systemName: "arrow.down")
+                        }
+                        .disabled(viewModel.currentTrackIndex < 0 || viewModel.currentTrackIndex >= viewModel.tracks.count - 1)
+                        .help("Move Track Down")
+                        
+                        Spacer()
+                        
+                        Button(action: { viewModel.deleteCurrentTrack() }) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                        }
+                        .disabled(viewModel.currentTrackIndex < 0 || viewModel.tracks.isEmpty)
+                        .help("Delete Track")
+                    }
+                    .padding(8)
+                    .background(Color(nsColor: .controlBackgroundColor))
                 }
             }
             .frame(minWidth: 280, maxWidth: 400)
@@ -867,6 +918,66 @@ class MacMusicViewModel: ObservableObject {
     func emptyPlaylist() {
         fx.show.music.removeAll(keepingCapacity: false)
         loadPlaylist()
+    }
+    
+    func deleteTrack(at index: Int) {
+        guard index >= 0 && index < fx.show.music.count else { return }
+        // Stop the track if it's currently playing
+        if fx.show.music[index].isPlaying() {
+            fx.show.music[index].stop()
+        }
+        fx.show.deleteMusic(index)
+        // Adjust current track index
+        if fx.show.music.isEmpty {
+            fx.show.selectTrack(0)
+        } else if index <= fx.show.currentTrackNo {
+            fx.show.selectTrack(max(0, fx.show.currentTrackNo - 1))
+        } else {
+            fx.show.selectTrack(fx.show.currentTrackNo)
+        }
+        fx.show.save()
+        loadPlaylist()
+    }
+    
+    func deleteCurrentTrack() {
+        guard currentTrackIndex >= 0 && currentTrackIndex < tracks.count else { return }
+        deleteTrack(at: currentTrackIndex)
+    }
+    
+    func moveTrackUp(from index: Int) {
+        guard index > 0 && index < fx.show.music.count else { return }
+        fx.show.reorderTracks(index, endNo: index - 1)
+        // If the current track was involved, update selection
+        if fx.show.currentTrackNo == index {
+            fx.show.selectTrack(index - 1)
+        } else if fx.show.currentTrackNo == index - 1 {
+            fx.show.selectTrack(index)
+        }
+        fx.show.save()
+        loadPlaylist()
+    }
+    
+    func moveTrackDown(from index: Int) {
+        guard index >= 0 && index < fx.show.music.count - 1 else { return }
+        fx.show.reorderTracks(index, endNo: index + 1)
+        // If the current track was involved, update selection
+        if fx.show.currentTrackNo == index {
+            fx.show.selectTrack(index + 1)
+        } else if fx.show.currentTrackNo == index + 1 {
+            fx.show.selectTrack(index)
+        }
+        fx.show.save()
+        loadPlaylist()
+    }
+    
+    func moveCurrentTrackUp() {
+        guard currentTrackIndex > 0 else { return }
+        moveTrackUp(from: currentTrackIndex)
+    }
+    
+    func moveCurrentTrackDown() {
+        guard currentTrackIndex < tracks.count - 1 else { return }
+        moveTrackDown(from: currentTrackIndex)
     }
     
     func updateTrackVolume(_ volume: Float) {
