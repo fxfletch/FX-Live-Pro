@@ -293,6 +293,38 @@ struct MacPerformView: View {
         .onAppear {
             viewModel.loadShow()
         }
+        // Keyboard shortcuts for spot effects (matching iPad Shift+1-6)
+        .background(performSpotShortcuts)
+    }
+    
+    // MARK: - Spot Effect Keyboard Shortcuts
+    
+    /// Hidden buttons providing keyboard shortcuts for spot effects 1-6
+    @ViewBuilder
+    private var performSpotShortcuts: some View {
+        Button("") { viewModel.playSpotEffect(at: 0) }
+            .keyboardShortcut(KeyEquivalent("1"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.playSpotEffect(at: 1) }
+            .keyboardShortcut(KeyEquivalent("2"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.playSpotEffect(at: 2) }
+            .keyboardShortcut(KeyEquivalent("3"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.playSpotEffect(at: 3) }
+            .keyboardShortcut(KeyEquivalent("4"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.playSpotEffect(at: 4) }
+            .keyboardShortcut(KeyEquivalent("5"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.playSpotEffect(at: 5) }
+            .keyboardShortcut(KeyEquivalent("6"), modifiers: [])
+            .hidden()
     }
     
     /// Convert master volume slider value (0–1) to dB display string

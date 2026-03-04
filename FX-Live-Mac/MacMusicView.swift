@@ -195,9 +195,19 @@ struct MacMusicView: View {
                 
                 Divider()
                 
-                // Spot Effects
+                // Spot Effects & Announcements
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Inline Properties Editor (shown when editing a spot)
+                        if let editIdx = viewModel.editingSpotIndex {
+                            MacSpotPropertiesEditor(
+                                spotIndex: editIdx,
+                                isSpotEffect: editIdx < 4,
+                                viewModel: viewModel
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                        
                         // Spot Effects (indices 0-3)
                         GroupBox("Spot Effects") {
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
@@ -207,9 +217,12 @@ struct MacMusicView: View {
                                         name: viewModel.spotNames[index],
                                         hasFile: viewModel.spotHasFile[index],
                                         isActive: viewModel.spotActive[index],
+                                        isEditing: viewModel.editingSpotIndex == index,
                                         onTap: { viewModel.toggleSpotEffect(at: index) },
                                         onSelect: { viewModel.selectSpotFile(at: index) },
-                                        onClear: { viewModel.clearSpotEffect(at: index) }
+                                        onClear: { viewModel.clearSpotEffect(at: index) },
+                                        onEdit: { viewModel.editSpotEffect(at: index) },
+                                        onRename: { viewModel.startRenaming(spotIndex: index) }
                                     )
                                 }
                             }
@@ -226,9 +239,12 @@ struct MacMusicView: View {
                                         name: viewModel.announcementNames[index],
                                         hasFile: viewModel.announcementHasFile[index],
                                         isActive: viewModel.announcementActive[index],
+                                        isEditing: viewModel.editingSpotIndex == index + 4,
                                         onTap: { viewModel.toggleAnnouncement(at: index) },
                                         onSelect: { viewModel.selectAnnouncementFile(at: index) },
-                                        onClear: { viewModel.clearAnnouncement(at: index) }
+                                        onClear: { viewModel.clearAnnouncement(at: index) },
+                                        onEdit: { viewModel.editSpotEffect(at: index + 4) },
+                                        onRename: { viewModel.startRenaming(spotIndex: index + 4) }
                                     )
                                 }
                             }
@@ -237,6 +253,7 @@ struct MacMusicView: View {
                         .padding(.horizontal)
                     }
                     .padding(.vertical)
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.editingSpotIndex)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -247,9 +264,94 @@ struct MacMusicView: View {
         } message: {
             Text("Do you want to empty the music playlist?")
         }
+        .alert("Rename", isPresented: $viewModel.showingRenameAlert) {
+            TextField("Name", text: $viewModel.renameText)
+            Button("OK") {
+                viewModel.confirmRename()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter a name for this effect")
+        }
         .onAppear {
             viewModel.loadPlaylist()
         }
+        // Keyboard shortcuts matching the Mac Perform view pattern
+        .background(musicKeyboardShortcuts)
+    }
+    
+    // MARK: - Keyboard Shortcuts
+    
+    /// Hidden buttons providing keyboard shortcuts for music and spot effect control
+    @ViewBuilder
+    private var musicKeyboardShortcuts: some View {
+        // Space = Play/Pause music
+        Button("") { viewModel.togglePlayPause() }
+            .keyboardShortcut(.space, modifiers: [])
+            .hidden()
+        
+        // F = Fade
+        Button("") { viewModel.fade() }
+            .keyboardShortcut(KeyEquivalent("f"), modifiers: [])
+            .hidden()
+        
+        // N = Stop Next toggle
+        Button("") { viewModel.toggleStopNext() }
+            .keyboardShortcut(KeyEquivalent("n"), modifiers: [])
+            .hidden()
+        
+        // S = Stop (emergency stop current track)
+        Button("") {
+            if viewModel.isPlaying {
+                fx.show.currentTrack.stop()
+            }
+        }
+            .keyboardShortcut(KeyEquivalent("s"), modifiers: [])
+            .hidden()
+        
+        // Left Arrow = Previous track
+        Button("") { viewModel.previousTrack() }
+            .keyboardShortcut(.leftArrow, modifiers: [])
+            .hidden()
+        
+        // Right Arrow = Next track
+        Button("") { viewModel.nextTrack() }
+            .keyboardShortcut(.rightArrow, modifiers: [])
+            .hidden()
+        
+        // 1-4 = Spot Effects
+        Button("") { viewModel.toggleSpotEffect(at: 0) }
+            .keyboardShortcut(KeyEquivalent("1"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleSpotEffect(at: 1) }
+            .keyboardShortcut(KeyEquivalent("2"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleSpotEffect(at: 2) }
+            .keyboardShortcut(KeyEquivalent("3"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleSpotEffect(at: 3) }
+            .keyboardShortcut(KeyEquivalent("4"), modifiers: [])
+            .hidden()
+        
+        // 5-8 = Announcements
+        Button("") { viewModel.toggleAnnouncement(at: 0) }
+            .keyboardShortcut(KeyEquivalent("5"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleAnnouncement(at: 1) }
+            .keyboardShortcut(KeyEquivalent("6"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleAnnouncement(at: 2) }
+            .keyboardShortcut(KeyEquivalent("7"), modifiers: [])
+            .hidden()
+        
+        Button("") { viewModel.toggleAnnouncement(at: 3) }
+            .keyboardShortcut(KeyEquivalent("8"), modifiers: [])
+            .hidden()
     }
 }
 
@@ -260,13 +362,26 @@ struct MacSpotButton: View {
     let name: String
     let hasFile: Bool
     let isActive: Bool
+    let isEditing: Bool
     let onTap: () -> Void
     let onSelect: () -> Void
     let onClear: () -> Void
+    let onEdit: () -> Void
+    let onRename: () -> Void
+    
+    private var displayNumber: Int {
+        index < 4 ? index + 1 : index - 3
+    }
+    
+    private var buttonColor: Color {
+        if isEditing { return .accentColor }
+        if isActive { return .green }
+        return index < 4 ? .blue : .purple
+    }
     
     var body: some View {
         VStack(spacing: 4) {
-            Text("\(index < 4 ? index + 1 : index - 3)")
+            Text("\(displayNumber)")
                 .font(.caption2)
                 .fontWeight(.semibold)
             
@@ -274,7 +389,7 @@ struct MacSpotButton: View {
                 Image(systemName: "plus.circle")
                     .font(.title3)
             } else {
-                Text(name.isEmpty ? "Spot \(index + 1)" : name)
+                Text(name.isEmpty ? (index < 4 ? "Spot \(displayNumber)" : "Announce \(displayNumber)") : name)
                     .font(.caption)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
@@ -285,11 +400,11 @@ struct MacSpotButton: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isActive ? Color.green.opacity(0.3) : Color(nsColor: .controlBackgroundColor))
+                .fill(isEditing ? buttonColor.opacity(0.15) : (isActive ? Color.green.opacity(0.3) : Color(nsColor: .controlBackgroundColor)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? Color.green : Color.secondary.opacity(0.3), lineWidth: 1)
+                .stroke(isEditing ? buttonColor : (isActive ? Color.green : Color.secondary.opacity(0.3)), lineWidth: isEditing ? 2 : 1)
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -297,10 +412,276 @@ struct MacSpotButton: View {
         }
         .contextMenu {
             if hasFile {
-                Button("Clear") { onClear() }
+                Button {
+                    onEdit()
+                } label: {
+                    Label("Edit Properties", systemImage: "slider.horizontal.3")
+                }
+                
+                Button {
+                    onRename()
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+                
+                Divider()
+                
+                Button {
+                    onSelect()
+                } label: {
+                    Label("Change File...", systemImage: "doc.badge.arrow.up")
+                }
+                
+                Divider()
+                
+                Button(role: .destructive) {
+                    onClear()
+                } label: {
+                    Label("Clear", systemImage: "trash")
+                }
+            } else {
+                Button {
+                    onSelect()
+                } label: {
+                    Label("Select File...", systemImage: "doc.badge.plus")
+                }
             }
-            Button("Select File...") { onSelect() }
         }
+    }
+}
+
+// MARK: - Spot Effect Properties Editor
+
+struct MacSpotPropertiesEditor: View {
+    let spotIndex: Int
+    let isSpotEffect: Bool // true = spot effect (0-3), false = announcement (4-7)
+    @ObservedObject var viewModel: MacMusicViewModel
+    @State private var isRenaming = false
+    @State private var renameText = ""
+    
+    private var effect: FxEffect {
+        fx.show.spotEffects[spotIndex]
+    }
+    
+    private var displayName: String {
+        let name = effect.name
+        if name.isEmpty || name == "New Event" {
+            return isSpotEffect ? "Spot Effect \(spotIndex + 1)" : "Announcement \(spotIndex - 3)"
+        }
+        return name
+    }
+    
+    private var accentColor: Color {
+        isSpotEffect ? .blue : .purple
+    }
+    
+    var body: some View {
+        GroupBox {
+            VStack(spacing: 12) {
+                // Header with name and close
+                HStack {
+                    Image(systemName: isSpotEffect ? "speaker.wave.2.fill" : "megaphone.fill")
+                        .foregroundColor(accentColor)
+                    
+                    if isRenaming {
+                        TextField("Name", text: $renameText, onCommit: {
+                            viewModel.renameSpotEffect(at: spotIndex, name: renameText)
+                            isRenaming = false
+                        })
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 200)
+                        
+                        Button("Done") {
+                            viewModel.renameSpotEffect(at: spotIndex, name: renameText)
+                            isRenaming = false
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    } else {
+                        Text(displayName)
+                            .font(.headline)
+                        
+                        Button {
+                            renameText = effect.name
+                            isRenaming = true
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    // Playing indicator
+                    if effect.isPlaying() {
+                        HStack(spacing: 4) {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                            Text("Playing")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                    }
+                    
+                    Button {
+                        viewModel.editingSpotIndex = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                Divider()
+                
+                // File info
+                HStack {
+                    Text("File")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .leading)
+                    Text(effect.file.isEmpty ? "No file selected" : effect.file)
+                        .font(.caption)
+                        .foregroundColor(effect.file.isEmpty ? .secondary : .primary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Change...") {
+                        viewModel.selectSpotFile(at: spotIndex)
+                    }
+                    .controlSize(.small)
+                }
+                
+                // Duration info
+                if effect.outPoint > 0 {
+                    HStack {
+                        Text("Duration")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 70, alignment: .leading)
+                        Text(viewModel.formatDuration(effect.getDuration()))
+                            .font(.caption.monospacedDigit())
+                        Spacer()
+                    }
+                }
+                
+                Divider()
+                
+                // Level
+                HStack {
+                    Text("Level")
+                        .font(.caption)
+                        .frame(width: 70, alignment: .leading)
+                    Slider(value: Binding(
+                        get: { Double(effect.level) },
+                        set: { viewModel.updateSpotLevel(at: spotIndex, level: Float($0)) }
+                    ), in: 0...1)
+                    Text("\(Int(effect.level * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 40)
+                }
+                
+                // Pan
+                HStack {
+                    Text("Pan")
+                        .font(.caption)
+                        .frame(width: 70, alignment: .leading)
+                    Slider(value: Binding(
+                        get: { Double(effect.pan) },
+                        set: { viewModel.updateSpotPan(at: spotIndex, pan: Float($0)) }
+                    ), in: -1...1)
+                    Text(panLabel(effect.pan))
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 40)
+                }
+                
+                Divider()
+                
+                // Fade In / Fade Out
+                HStack(spacing: 16) {
+                    HStack {
+                        Text("Fade In")
+                            .font(.caption)
+                            .frame(width: 50, alignment: .leading)
+                        Slider(value: Binding(
+                            get: { Double(effect.inTrans) },
+                            set: { viewModel.updateSpotFadeIn(at: spotIndex, time: Float($0)) }
+                        ), in: 0...30)
+                        Text(String(format: "%.1fs", effect.inTrans))
+                            .font(.caption.monospacedDigit())
+                            .frame(width: 40)
+                    }
+                    
+                    HStack {
+                        Text("Fade Out")
+                            .font(.caption)
+                            .frame(width: 55, alignment: .leading)
+                        Slider(value: Binding(
+                            get: { Double(effect.outTrans) },
+                            set: { viewModel.updateSpotFadeOut(at: spotIndex, time: Float($0)) }
+                        ), in: 0...30)
+                        Text(String(format: "%.1fs", effect.outTrans))
+                            .font(.caption.monospacedDigit())
+                            .frame(width: 40)
+                    }
+                }
+                
+                // Loop toggle
+                HStack {
+                    Toggle(isOn: Binding(
+                        get: { effect.loop },
+                        set: { viewModel.updateSpotLoop(at: spotIndex, loop: $0) }
+                    )) {
+                        Label("Loop", systemImage: "repeat")
+                            .font(.caption)
+                    }
+                    .toggleStyle(.checkbox)
+                    
+                    Spacer()
+                    
+                    // Play/Stop button
+                    Button {
+                        if effect.isPlaying() {
+                            effect.stop()
+                        } else {
+                            effect.spotPlay()
+                        }
+                    } label: {
+                        Label(effect.isPlaying() ? "Stop" : "Play", systemImage: effect.isPlaying() ? "stop.fill" : "play.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(effect.isPlaying() ? .red : .green)
+                    .controlSize(.small)
+                    
+                    // Clear button
+                    Button(role: .destructive) {
+                        if spotIndex < 4 {
+                            viewModel.clearSpotEffect(at: spotIndex)
+                        } else {
+                            viewModel.clearAnnouncement(at: spotIndex - 4)
+                        }
+                        viewModel.editingSpotIndex = nil
+                    } label: {
+                        Label("Clear", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+            .padding(4)
+        } label: {
+            Label(isSpotEffect ? "Spot Effect Properties" : "Announcement Properties", systemImage: "slider.horizontal.3")
+        }
+        .padding(.horizontal)
+    }
+    
+    private func panLabel(_ pan: Float) -> String {
+        if abs(pan) < 0.05 { return "C" }
+        if pan < 0 { return String(format: "L%.0f", abs(pan) * 100) }
+        return String(format: "R%.0f", pan * 100)
     }
 }
 
@@ -326,6 +707,12 @@ class MacMusicViewModel: ObservableObject {
     @Published var announcementNames: [String] = ["", "", "", ""]
     @Published var announcementHasFile: [Bool] = [false, false, false, false]
     @Published var announcementActive: [Bool] = [false, false, false, false]
+    
+    // Spot editing state
+    @Published var editingSpotIndex: Int? = nil
+    @Published var showingRenameAlert = false
+    @Published var renameText = ""
+    private var renamingSpotIndex: Int = 0
     
     private var timer: Timer?
     
@@ -602,6 +989,76 @@ class MacMusicViewModel: ObservableObject {
                 self?.updateSpotData()
             }
         }
+    }
+    
+    // MARK: - Spot Effect Editing
+    
+    func editSpotEffect(at spotIndex: Int) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        if editingSpotIndex == spotIndex {
+            editingSpotIndex = nil
+        } else {
+            editingSpotIndex = spotIndex
+        }
+    }
+    
+    func startRenaming(spotIndex: Int) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        renamingSpotIndex = spotIndex
+        renameText = fx.show.spotEffects[spotIndex].name
+        showingRenameAlert = true
+    }
+    
+    func confirmRename() {
+        guard renamingSpotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[renamingSpotIndex].name = renameText
+        fx.show.save()
+        updateSpotData()
+    }
+    
+    func renameSpotEffect(at spotIndex: Int, name: String) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].name = name
+        fx.show.save()
+        updateSpotData()
+    }
+    
+    func updateSpotLevel(at spotIndex: Int, level: Float) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].level = level
+        // If currently playing, update live level
+        if fx.show.spotEffects[spotIndex].isPlaying() {
+            fx.audio.setLevel(fx.show.spotEffects[spotIndex].stream, level: level)
+        }
+        fx.show.save()
+    }
+    
+    func updateSpotPan(at spotIndex: Int, pan: Float) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].pan = pan
+        // If currently playing, update live pan
+        if fx.show.spotEffects[spotIndex].isPlaying() {
+            fx.audio.setPan(fx.show.spotEffects[spotIndex].stream, level: pan)
+        }
+        fx.show.save()
+    }
+    
+    func updateSpotFadeIn(at spotIndex: Int, time: Float) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].inTrans = time
+        fx.show.save()
+    }
+    
+    func updateSpotFadeOut(at spotIndex: Int, time: Float) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].outTrans = time
+        fx.show.save()
+    }
+    
+    func updateSpotLoop(at spotIndex: Int, loop: Bool) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        fx.show.spotEffects[spotIndex].loop = loop
+        fx.show.save()
     }
     
     func formatDuration(_ seconds: Float) -> String {
