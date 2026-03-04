@@ -58,7 +58,7 @@ struct MacPerformView: View {
                             .foregroundColor(viewModel.currentCueNotes.isEmpty ? .secondary : .primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(height: 60)
+                    .frame(height: 200)
                 }
                 .padding(12)
                 .padding(.horizontal, 8)
@@ -176,37 +176,81 @@ struct MacPerformView: View {
                 
                 // Transport Controls
                 HStack(spacing: 12) {
-                    Button("Stop") { viewModel.stopAll() }
-                        .buttonStyle(.bordered)
-                        .tint(.red)
-                        .keyboardShortcut("s", modifiers: [])
+                    Button(action: { viewModel.stopAll() }) {
+                        Label("Stop", systemImage: "stop.fill")
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .keyboardShortcut("s", modifiers: [])
                     
-                    Button(viewModel.isPaused ? "Resume" : "Pause") { viewModel.pauseAll() }
-                        .buttonStyle(.bordered)
-                        .tint(.orange)
-                        .keyboardShortcut("p", modifiers: [])
+                    Button(action: { viewModel.pauseAll() }) {
+                        Label(viewModel.isPaused ? "Resume" : "Pause",
+                              systemImage: viewModel.isPaused ? "play.fill" : "pause.fill")
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .keyboardShortcut("p", modifiers: [])
                     
-                    Button(viewModel.isPaused ? "Back 10s" : "Abort") { viewModel.abortCue() }
-                        .buttonStyle(.bordered)
-                        .tint(.purple)
-                        .keyboardShortcut("a", modifiers: [])
+                    Button(action: { viewModel.abortCue() }) {
+                        Label(viewModel.isPaused ? "Back 10s" : "Abort",
+                              systemImage: viewModel.isPaused ? "gobackward.10" : "xmark.circle.fill")
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(viewModel.isPaused ? .purple : .red)
+                    .keyboardShortcut("a", modifiers: [])
                     
-                    Button("Recue Show") { viewModel.recueShow() }
-                        .buttonStyle(.bordered)
-                        .tint(.blue)
-                        .keyboardShortcut("r", modifiers: [])
+                    Button(action: { viewModel.recueShow() }) {
+                        Label(viewModel.isPaused ? "Back 30s" : "Recue Show",
+                              systemImage: viewModel.isPaused ? "gobackward.30" : "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .keyboardShortcut("r", modifiers: [])
                 }
                 .padding(.horizontal)
                 
                 // Master Volume
-                HStack {
-                    Text("Master Volume")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Slider(value: $viewModel.masterVolume, in: 0...1)
-                    Text("\(Int(viewModel.masterVolume * 100))%")
-                        .font(.caption.monospacedDigit())
-                        .frame(width: 40)
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("Master Volume")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(masterVolumeDB(viewModel.masterVolume))
+                            .font(.system(.caption, design: .monospaced))
+                            .fontWeight(.semibold)
+                            .foregroundColor(viewModel.masterVolume > 0.5 ? .orange : .primary)
+                            .frame(width: 70, alignment: .trailing)
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "speaker.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Slider(value: $viewModel.masterVolume, in: 0...1)
+                            .tint(viewModel.masterVolume > 0.5 ? .orange : .blue)
+                        Image(systemName: "speaker.wave.3.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    // dB scale markers
+                    HStack {
+                        Text("-∞")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("0 dB")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("+6 dB")
+                            .font(.system(size: 9))
+                            .foregroundColor(.orange.opacity(0.7))
+                    }
+                    .padding(.horizontal, 20)
                 }
                 .padding(.horizontal)
                 
@@ -235,7 +279,7 @@ struct MacPerformView: View {
                         ScrollView {
                             VStack(spacing: 8) {
                                 ForEach(viewModel.activeEffects, id: \.id) { effect in
-                                    MacActiveEffectRow(effect: effect, onStop: {
+                                    MacActiveEffectRow(effect: effect, tick: viewModel.updateTick, onStop: {
                                         effect.stop()
                                     })
                                     .padding(.horizontal)
@@ -250,12 +294,24 @@ struct MacPerformView: View {
             viewModel.loadShow()
         }
     }
+    
+    /// Convert master volume slider value (0–1) to dB display string
+    /// 0.5 = 0 dB (unity), 1.0 ≈ +6 dB, 0 = -∞ dB
+    private func masterVolumeDB(_ value: Double) -> String {
+        if value <= 0 { return "-∞ dB" }
+        // Map slider so 0.5 = 0 dB (unity gain)
+        // dB = 20 * log10(value / 0.5)
+        let dB = 20.0 * log10(value / 0.5)
+        if abs(dB) < 0.05 { return "0.00 dB" }
+        return String(format: "%+.2f dB", dB)
+    }
 }
 
 // MARK: - Active Effect Row
 
 struct MacActiveEffectRow: View {
     let effect: FxEffect
+    let tick: UInt  // Forces re-render when view model ticks
     let onStop: () -> Void
     
     var body: some View {
@@ -360,16 +416,20 @@ class MacPerformViewModel: ObservableObject {
     @Published var nextCueName = ""
     @Published var activeCueIndex: Int?
     @Published var nextCueIndex: Int?
-    @Published var masterVolume: Double = 1.0 {
+    @Published var masterVolume: Double = 0.5 {
         didSet { fx.audio.globalVolume(Float(masterVolume)) }
     }
     @Published var isPaused = false
     @Published var isAutoFollowActive = false
     @Published var autoFollowCountdown = ""
+    @Published var updateTick: UInt = 0  // Forces UI refresh for live data
     
     private var timer: Timer?
     
     init() {
+        // Apply default master volume on startup (0.5 = 0 dB)
+        fx.audio.globalVolume(0.5)
+        
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateDisplay()
@@ -387,6 +447,9 @@ class MacPerformViewModel: ObservableObject {
         
         for eff in fx.activeEffects { eff.process() }
         _ = fx.show.processMusic()
+        
+        // Increment tick to force SwiftUI to re-render live data (progress, volume, counters)
+        updateTick &+= 1
         
         if fx.show.currentVersion.activeCueNo >= 0 && fx.show.currentVersion.activeCueNo < cues.count {
             let currentCue = fx.show.currentVersion.getCue(fx.show.currentVersion.activeCueNo)

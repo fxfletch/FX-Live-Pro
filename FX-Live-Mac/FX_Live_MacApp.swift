@@ -13,7 +13,7 @@ struct FX_Live_MacApp: App {
     init() {
         // Apply saved audio settings at launch
         fx.audio.logLevels = settings.logLevels
-        fx.audio.globalVolume(10000)
+        fx.audio.globalVolume(0.5)  // 0.5 = 0 dB (unity gain)
         
         // Initialize app - load settings or install demo on first run
         initializeApp()
