@@ -419,17 +419,34 @@ class MacShowsViewModel: ObservableObject {
                 let name = url.lastPathComponent
                 let ext = url.pathExtension.lowercased()
                 
+                print("📥 importContent: processing file '\(name)' ext='\(ext)' sourceURL=\(url.path)")
+                
                 // Archives (.fxdoc, .fxzip) go to a temp location for restore
                 if ext == "fxdoc" || ext == "fxzip" {
                     let tempPath = NSTemporaryDirectory().appending(name)
+                    print("📥 importContent: detected archive (\(ext)), tempPath=\(tempPath)")
+                    
+                    let sourceExists = FileManager.default.fileExists(atPath: url.path)
+                    print("📥 importContent: source file exists=\(sourceExists)")
+                    if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) {
+                        print("📥 importContent: source file size=\(attrs[.size] ?? "unknown") bytes")
+                    }
+                    
                     do {
                         if FileManager.default.fileExists(atPath: tempPath) {
+                            print("📥 importContent: removing existing temp file at \(tempPath)")
                             try FileManager.default.removeItem(atPath: tempPath)
                         }
                         try FileManager.default.copyItem(at: url, to: URL(fileURLWithPath: tempPath))
+                        let tempExists = FileManager.default.fileExists(atPath: tempPath)
+                        print("📥 importContent: copied archive to temp, exists=\(tempExists)")
+                        if let attrs = try? FileManager.default.attributesOfItem(atPath: tempPath) {
+                            print("📥 importContent: temp file size=\(attrs[.size] ?? "unknown") bytes")
+                        }
                         archivePaths.append((path: tempPath, ext: ext))
+                        print("📥 importContent: added to archivePaths, count=\(archivePaths.count)")
                     } catch {
-                        print("Import error copying archive: \(error)")
+                        print("📥 ❌ importContent: error copying archive: \(error)")
                     }
                 }
                 // Show files (.fxLive) create a new show folder
@@ -487,9 +504,18 @@ class MacShowsViewModel: ObservableObject {
         isRestoring = true
         let paths = archivePathsToRestore
         
+        print("📦 restoreArchives: starting restore of \(paths.count) archive(s)")
+        for (i, a) in paths.enumerated() {
+            print("📦 restoreArchives: [\(i)] ext=\(a.ext) path=\(a.path)")
+        }
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             for archive in paths {
-                print("Restoring archive: \(archive.path)")
+                let archiveExists = FileManager.default.fileExists(atPath: archive.path)
+                print("📦 restoreArchives: processing '\(archive.path)' ext=\(archive.ext) exists=\(archiveExists)")
+                if let attrs = try? FileManager.default.attributesOfItem(atPath: archive.path) {
+                    print("📦 restoreArchives: archive size=\(attrs[.size] ?? "unknown") bytes")
+                }
                 
                 if archive.ext == "fxdoc" {
                     // .fxdoc is a FileWrapper bundle — extract to find the show name,
@@ -498,32 +524,81 @@ class MacShowsViewModel: ObservableObject {
                     
                     // Determine show name from the archive filename
                     let archiveName = ((archive.path as NSString).lastPathComponent as NSString).deletingPathExtension
+                    print("📦 restoreArchives [fxdoc]: archiveName='\(archiveName)'")
                     
                     DispatchQueue.main.sync {
                         mgr.createShowFolder(archiveName)
                         mgr.setCurrentShow(archiveName)
                     }
                     
+                    let showFolder = mgr.currentShowFolder
+                    print("📦 restoreArchives [fxdoc]: show folder set to '\(showFolder)'")
+                    print("📦 restoreArchives [fxdoc]: show folder exists=\(FileManager.default.fileExists(atPath: showFolder))")
+                    print("📦 restoreArchives [fxdoc]: documentsPath()=\(documentsPath())")
+                    
                     // restoreArchive extracts to documentsPath() which is now the show folder
+                    print("📦 restoreArchives [fxdoc]: calling fx.show.restoreArchive(path: \(archive.path))")
                     fx.show.restoreArchive(path: archive.path)
+                    
+                    // List files after restore
+                    if let contents = try? FileManager.default.contentsOfDirectory(atPath: showFolder) {
+                        print("📦 restoreArchives [fxdoc]: show folder now contains \(contents.count) file(s):")
+                        for file in contents {
+                            let filePath = (showFolder as NSString).appendingPathComponent(file)
+                            let size = (try? FileManager.default.attributesOfItem(atPath: filePath))?[.size] ?? "?"
+                            print("📦   - \(file) (\(size) bytes)")
+                        }
+                    } else {
+                        print("📦 ❌ restoreArchives [fxdoc]: could not list show folder contents")
+                    }
+                    
+                    // Check for .fxLive file specifically
+                    let fxLivePath = (showFolder as NSString).appendingPathComponent("\(archiveName).fxLive")
+                    let fxlivePath = (showFolder as NSString).appendingPathComponent("\(archiveName).fxlive")
+                    print("📦 restoreArchives [fxdoc]: .fxLive exists=\(FileManager.default.fileExists(atPath: fxLivePath)), .fxlive exists=\(FileManager.default.fileExists(atPath: fxlivePath))")
                     
                     // Clean up temp file
                     try? FileManager.default.removeItem(atPath: archive.path)
+                    print("📦 restoreArchives [fxdoc]: cleaned up temp file")
                     
                 } else if archive.ext == "fxzip" {
                     let mgr = MacShowManager.shared
                     let archiveName = ((archive.path as NSString).lastPathComponent as NSString).deletingPathExtension
+                    print("📦 restoreArchives [fxzip]: archiveName='\(archiveName)'")
                     
                     DispatchQueue.main.sync {
                         mgr.createShowFolder(archiveName)
                         mgr.setCurrentShow(archiveName)
                     }
                     
+                    let showFolder = mgr.currentShowFolder
+                    print("📦 restoreArchives [fxzip]: show folder set to '\(showFolder)'")
+                    print("📦 restoreArchives [fxzip]: show folder exists=\(FileManager.default.fileExists(atPath: showFolder))")
+                    print("📦 restoreArchives [fxzip]: documentsPath()=\(documentsPath())")
+                    print("📦 restoreArchives [fxzip]: ObjC myDocsDirectory will point to macOSShowFolderOverride")
+                    
+                    print("📦 restoreArchives [fxzip]: calling fx.audio.unarchive(\(archive.path))")
                     fx.audio.unarchive(archive.path)
                     
+                    // Wait a moment for async unarchive to complete, then list files
+                    Thread.sleep(forTimeInterval: 2.0)
+                    if let contents = try? FileManager.default.contentsOfDirectory(atPath: showFolder) {
+                        print("📦 restoreArchives [fxzip]: show folder now contains \(contents.count) file(s):")
+                        for file in contents {
+                            let filePath = (showFolder as NSString).appendingPathComponent(file)
+                            let size = (try? FileManager.default.attributesOfItem(atPath: filePath))?[.size] ?? "?"
+                            print("📦   - \(file) (\(size) bytes)")
+                        }
+                    } else {
+                        print("📦 ❌ restoreArchives [fxzip]: could not list show folder contents")
+                    }
+                    
                     try? FileManager.default.removeItem(atPath: archive.path)
+                    print("📦 restoreArchives [fxzip]: cleaned up temp file")
                 }
             }
+            
+            print("📦 restoreArchives: all archives processed, updating UI")
             
             DispatchQueue.main.async {
                 let mgr = MacShowManager.shared
@@ -532,11 +607,17 @@ class MacShowsViewModel: ObservableObject {
                 self?.isRestoring = false
                 self?.archivePathsToRestore = []
                 
+                print("📦 restoreArchives: shows list = \(self?.shows ?? [])")
+                
                 // Select the last restored show
                 if let lastArchive = paths.last {
                     let showName = ((lastArchive.path as NSString).lastPathComponent as NSString).deletingPathExtension
-                    if mgr.showExists(showName) {
+                    let exists = mgr.showExists(showName)
+                    print("📦 restoreArchives: selecting last show '\(showName)', exists=\(exists)")
+                    if exists {
                         self?.selectShow(showName)
+                    } else {
+                        print("📦 ❌ restoreArchives: show '\(showName)' not found after restore!")
                     }
                 }
             }

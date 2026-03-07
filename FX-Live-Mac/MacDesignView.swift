@@ -28,7 +28,18 @@ struct MacDesignView: View {
             // Right Panel: Effect Editor with Timeline
             MacEffectEditorPanel(viewModel: viewModel)
                 .frame(minWidth: 400, idealWidth: 500)
+            
+            // Far Right: Full-height Output Level Meters
+            MacOutputMeterStrip(
+                meterLeftDB: viewModel.meterLeftDB,
+                meterRightDB: viewModel.meterRightDB,
+                busLevels: [],
+                multiOutputEnabled: false,
+                busCount: 0
+            )
+            .frame(width: 50)
         }
+        .padding(4)
         .onAppear {
             viewModel.loadShow()
         }
@@ -467,6 +478,16 @@ struct MacEffectRow: View {
                         Image(systemName: "repeat")
                             .font(.system(size: 9))
                             .foregroundColor(.orange)
+                    }
+                    
+                    if effect.output > 0 {
+                        Text(OutputBus.labelFor(effect.output))
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.cyan.opacity(0.2))
+                            .cornerRadius(3)
+                            .foregroundColor(.cyan)
                     }
                 }
             }
@@ -1583,6 +1604,39 @@ struct MacCommonControlsSection: View {
     var body: some View {
         GroupBox("Options") {
             VStack(spacing: 8) {
+                // Output selector
+                HStack {
+                    Text("Output:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(width: 70, alignment: .trailing)
+                    
+                    let busCount = MacOutputManager.shared.buses.count
+                    
+                    if busCount <= 8 {
+                        // Segmented style for small number of buses
+                        Picker("", selection: $viewModel.effectOutput) {
+                            ForEach(0..<busCount, id: \.self) { i in
+                                Text(OutputBus.labelFor(i)).tag(i)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: CGFloat(busCount) * 40)
+                        .onChange(of: viewModel.effectOutput) { _, _ in viewModel.saveEffectProperties() }
+                    } else {
+                        // Dropdown for many buses
+                        Picker("", selection: $viewModel.effectOutput) {
+                            ForEach(0..<busCount, id: \.self) { i in
+                                Text("Output \(OutputBus.labelFor(i))").tag(i)
+                            }
+                        }
+                        .frame(width: 140)
+                        .onChange(of: viewModel.effectOutput) { _, _ in viewModel.saveEffectProperties() }
+                    }
+                    
+                    Spacer()
+                }
+                
                 // Delay (for non-audio types that don't show transport)
                 if effect.type != fx.TYPE_AUDIO && effect.type != fx.TYPE_MUSIC {
                     HStack {
@@ -1609,6 +1663,10 @@ struct MacCommonControlsSection: View {
                     Toggle("Background (continues after GO)", isOn: $viewModel.effectBackground)
                         .toggleStyle(.checkbox)
                         .onChange(of: viewModel.effectBackground) { _, _ in viewModel.saveEffectProperties() }
+                    
+                    Toggle("Don't Fade", isOn: $viewModel.effectDontFade)
+                        .toggleStyle(.checkbox)
+                        .onChange(of: viewModel.effectDontFade) { _, _ in viewModel.saveEffectProperties() }
                     
                     Spacer()
                 }
@@ -1652,6 +1710,8 @@ class MacDesignViewModel: ObservableObject {
     @Published var effectLoop = false
     @Published var effectBackground = false
     @Published var isSpotEffect = false
+    @Published var effectOutput: Int = 0
+    @Published var effectDontFade = false
     
     // Timeline/playback state
     @Published var currentPlaybackPosition: Float = 0
@@ -1662,6 +1722,10 @@ class MacDesignViewModel: ObservableObject {
     @Published var fullWaveformData: [Float] = []  // Full file waveform for trim view
     @Published var isPreviewingEffect = false
     @Published var isPreviewingCue = false
+    
+    // Output meters
+    @Published var meterLeftDB: Float = -100
+    @Published var meterRightDB: Float = -100
     
     // Clipboard
     @Published var canPaste = false
@@ -1715,6 +1779,11 @@ class MacDesignViewModel: ObservableObject {
     }
     
     private func updatePlaybackState() {
+        // Poll mixer output levels for meters
+        let levels = fx.getMixerLevels()
+        meterLeftDB = levels.left
+        meterRightDB = levels.right
+        
         guard let effect = currentEffect else { return }
         
         let wasPlaying = isPreviewingEffect
@@ -1932,6 +2001,8 @@ class MacDesignViewModel: ObservableObject {
         effectLoop = effect.loop
         effectBackground = effect.background
         isSpotEffect = effect.spotEffect
+        effectOutput = effect.output
+        effectDontFade = effect.dontFade
         
         // Sync engine
         cue.currentEffectNo = index
@@ -2111,6 +2182,8 @@ class MacDesignViewModel: ObservableObject {
         effect.loop = effectLoop
         effect.background = effectBackground
         effect.spotEffect = isSpotEffect
+        effect.output = effectOutput
+        effect.dontFade = effectDontFade
         
         // Live update if playing
         if effect.isPlaying() {
@@ -2449,6 +2522,8 @@ class MacDesignViewModel: ObservableObject {
         effectLoop = false
         effectBackground = false
         isSpotEffect = false
+        effectOutput = 0
+        effectDontFade = false
         effectDuration = 0
         fileDuration = 0
         currentPlaybackPosition = 0

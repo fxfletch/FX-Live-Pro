@@ -213,7 +213,7 @@ struct MacFilesView: View {
     
     private func deleteFile(_ file: String) {
         let path = documentsPath(file)
-        fx.audio.myDeleteFile(path)
+        try? FileManager.default.removeItem(atPath: path)
         if previewingFile == file { previewingFile = "" }
         loadFiles()
     }

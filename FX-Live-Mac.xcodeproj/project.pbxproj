@@ -16,6 +16,9 @@
         A10006AA /* MacMusicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10006AB /* MacMusicView.swift */; };
         A10007AA /* MacFilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10007AB /* MacFilesView.swift */; };
         A10008AA /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10008AB /* MacSettingsView.swift */; };
+        A10026AA /* AudioOutputRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10026AB /* AudioOutputRoute.swift */; };
+        A10027AA /* MacOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10027AB /* MacOutputManager.swift */; };
+        A10028AA /* MacLevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10028AB /* MacLevelMeterView.swift */; };
         A10011AA /* FxEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10011AB /* FxEngine.swift */; };
         A10012AA /* FxShow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10012AB /* FxShow.swift */; };
         A10013AA /* FxVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10013AB /* FxVersion.swift */; };
@@ -123,6 +126,9 @@
         A10007AB /* MacFilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacFilesView.swift; sourceTree = "<group>"; };
         A10008AB /* MacSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsView.swift; sourceTree = "<group>"; };
         A10009AB /* FX-Live-Mac-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FX-Live-Mac-Bridging-Header.h"; sourceTree = "<group>"; };
+        A10026AB /* AudioOutputRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioOutputRoute.swift; path = "../FX-Live2/FX-Live2/AudioOutputRoute.swift"; sourceTree = "<group>"; };
+        A10027AB /* MacOutputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOutputManager.swift; sourceTree = "<group>"; };
+        A10028AB /* MacLevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLevelMeterView.swift; sourceTree = "<group>"; };
         A10011AB /* FxEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxEngine.swift; path = "../FX-Live2/FX-Live2/FxEngine.swift"; sourceTree = "<group>"; };
         A10012AB /* FxShow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxShow.swift; path = "../FX-Live2/FX-Live2/FxShow.swift"; sourceTree = "<group>"; };
         A10013AB /* FxVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxVersion.swift; path = "../FX-Live2/FX-Live2/FxVersion.swift"; sourceTree = "<group>"; };
@@ -256,6 +262,8 @@
                 A10006AB /* MacMusicView.swift */,
                 A10007AB /* MacFilesView.swift */,
                 A10008AB /* MacSettingsView.swift */,
+                A10027AB /* MacOutputManager.swift */,
+                A10028AB /* MacLevelMeterView.swift */,
                 A10009AB /* FX-Live-Mac-Bridging-Header.h */,
                 B20001AB /* MacShowManager.swift */,
                 A1G00008 /* DemoResources */,
@@ -276,6 +284,7 @@
                 A10018AB /* FxDSP.swift */,
                 A10019AB /* propertyAnimation.swift */,
                 A10010AB /* Utils.swift */,
+                A10026AB /* AudioOutputRoute.swift */,
                 A10020AB /* AudioEngine.h */,
                 A10021AB /* audioEngine.m */,
                 A10022AC /* EQSettings.h */,
@@ -516,6 +525,9 @@
                 A10018AA /* FxDSP.swift in Sources */,
                 A10019AA /* propertyAnimation.swift in Sources */,
                 A10010AA /* Utils.swift in Sources */,
+                A10026AA /* AudioOutputRoute.swift in Sources */,
+                A10027AA /* MacOutputManager.swift in Sources */,
+                A10028AA /* MacLevelMeterView.swift in Sources */,
                 A10021AA /* audioEngine.m in Sources */,
                 A10022AA /* EQSettings.m in Sources */,
                 A10023AA /* DSPSettings.m in Sources */,

@@ -80,6 +80,15 @@ struct FX_Live_MacApp: App {
         
         print("   📋 fx.show.name: '\(fx.show.name)'")
         print("   📋 fx.show.currentVersion.cues.count: \(fx.show.currentVersion.cues.count)")
+        
+        // Initialise multi-output manager (loads saved bus assignments)
+        Task { @MainActor in
+            let outputMgr = MacOutputManager.shared
+            outputMgr.enumerateDevices()
+            outputMgr.loadSettings()
+            print("   🔊 Output manager initialised, multiOutput=\(outputMgr.multiOutputEnabled)")
+        }
+        
         print("🚀 FX_Live_MacApp.initializeApp() complete\n")
     }
     

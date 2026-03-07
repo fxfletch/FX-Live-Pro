@@ -11,110 +11,113 @@ struct MacPerformView: View {
     @StateObject private var viewModel = MacPerformViewModel()
     
     var body: some View {
-        HSplitView {
-            // Left: Cue list + info
-            VStack(spacing: 0) {
-                // Current Cue
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("CURRENT CUE")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white.opacity(0.8))
-                    Text(viewModel.currentCueName)
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.green))
-                .padding(8)
-                
-                // Next Cue
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NEXT CUE")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.black.opacity(0.6))
-                    Text(viewModel.nextCueName)
-                        .font(.title3)
-                        .foregroundColor(.black)
-                        .lineLimit(2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.yellow.opacity(0.7)))
-                .padding(.horizontal, 8)
-                
-                // Cue Notes
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("NOTES")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                    ScrollView {
-                        Text(viewModel.currentCueNotes.isEmpty ? "No notes" : viewModel.currentCueNotes)
-                            .font(.body)
-                            .foregroundColor(viewModel.currentCueNotes.isEmpty ? .secondary : .primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 0) {
+            HSplitView {
+                // Left: Cue list + info
+                VStack(spacing: 0) {
+                    // Current Cue
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("CURRENT")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white.opacity(0.7))
+                            Text(viewModel.currentCueName)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                        }
+                        Spacer()
                     }
-                    .frame(height: 200)
-                }
-                .padding(12)
-                .padding(.horizontal, 8)
-                
-                Divider()
-                
-                // Cue List
-                ScrollViewReader { proxy in
-                    List(Array(viewModel.cues.enumerated()), id: \.offset) { index, cue in
-                        HStack {
-                            Text("\(index + 1)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundColor(.secondary)
-                                .frame(width: 30)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(cue.getName())
-                                    .font(.body)
-                                    .fontWeight(viewModel.isActiveCue(index) ? .bold : .regular)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.green))
+                    .padding(.horizontal, 8)
+                    .padding(.top, 8)
+                    
+                    // Next Cue
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("NEXT")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.black.opacity(0.5))
+                            Text(viewModel.nextCueName)
+                                .font(.system(size: 13))
+                                .foregroundColor(.black)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.yellow.opacity(0.7)))
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
+                    
+                    // Cue Notes (compact)
+                    if !viewModel.currentCueNotes.isEmpty {
+                        Text(viewModel.currentCueNotes)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                    }
+                    
+                    Divider()
+                        .padding(.horizontal, 8)
+                    
+                    // Cue List - fills remaining space
+                    ScrollViewReader { proxy in
+                        List(Array(viewModel.cues.enumerated()), id: \.offset) { index, cue in
+                            HStack {
+                                Text("\(index + 1)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 30)
                                 
-                                HStack {
-                                    Text(viewModel.formatDuration(cue.duration()))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    if cue.autoFollow {
-                                        Text("Auto")
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(cue.getName())
+                                        .font(.body)
+                                        .fontWeight(viewModel.isActiveCue(index) ? .bold : .regular)
+                                    
+                                    HStack {
+                                        Text(viewModel.formatDuration(cue.duration()))
                                             .font(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.orange)
+                                            .foregroundColor(.secondary)
+                                        if cue.autoFollow {
+                                            Text("Auto")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.orange)
+                                        }
                                     }
                                 }
+                                
+                                Spacer()
                             }
+                            .listRowBackground(
+                                viewModel.isActiveCue(index) ? Color.green.opacity(0.3) :
+                                viewModel.isNextCue(index) ? Color.yellow.opacity(0.3) :
+                                Color.clear
+                            )
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.selectCue(at: index)
+                            }
+                            .id(index)
                         }
-                        .listRowBackground(
-                            viewModel.isActiveCue(index) ? Color.green.opacity(0.3) :
-                            viewModel.isNextCue(index) ? Color.yellow.opacity(0.3) :
-                            Color.clear
-                        )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.selectCue(at: index)
-                        }
-                        .id(index)
-                    }
-                    .listStyle(.inset(alternatesRowBackgrounds: true))
-                    .onReceive(viewModel.$activeCueIndex) { newIndex in
-                        if let idx = newIndex, idx >= 0 {
-                            withAnimation { proxy.scrollTo(idx, anchor: .center) }
+                        .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .onReceive(viewModel.$activeCueIndex) { newIndex in
+                            if let idx = newIndex, idx >= 0 {
+                                withAnimation { proxy.scrollTo(idx, anchor: .center) }
+                            }
                         }
                     }
                 }
-            }
-            .frame(minWidth: 280, maxWidth: 400)
-            
-            // Right: Controls and active effects
-            VStack(spacing: 12) {
+                .padding(.bottom, 8)
+                .frame(minWidth: 250, idealWidth: 320, maxWidth: 400)
+                
+                // Right: Controls and active effects
+            VStack(spacing: 8) {
                 // GO Button
                 Button(action: { viewModel.go() }) {
                     HStack(spacing: 12) {
@@ -236,25 +239,11 @@ struct MacPerformView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    // dB scale markers
-                    HStack {
-                        Text("-∞")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("0 dB")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("+6 dB")
-                            .font(.system(size: 9))
-                            .foregroundColor(.orange.opacity(0.7))
-                    }
-                    .padding(.horizontal, 20)
                 }
                 .padding(.horizontal)
                 
                 Divider()
+                    .padding(.horizontal)
                 
                 // Active Effects
                 VStack(alignment: .leading, spacing: 4) {
@@ -289,7 +278,24 @@ struct MacPerformView: View {
                     }
                 }
             }
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
+            
+            // Right edge: Full-height output level meters (fixed, outside HSplitView)
+            MacOutputMeterStrip(
+                meterLeftDB: viewModel.meterLeftDB,
+                meterRightDB: viewModel.meterRightDB,
+                busLevels: viewModel.busLevels,
+                multiOutputEnabled: MacOutputManager.shared.multiOutputEnabled,
+                busCount: MacOutputManager.shared.buses.count
+            )
+            .frame(width: MacOutputManager.shared.multiOutputEnabled && MacOutputManager.shared.buses.count > 1
+                   ? CGFloat(30 + MacOutputManager.shared.buses.count * 28)
+                   : 50)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(4)
         .onAppear {
             viewModel.loadShow()
         }
@@ -455,6 +461,9 @@ class MacPerformViewModel: ObservableObject {
     @Published var isAutoFollowActive = false
     @Published var autoFollowCountdown = ""
     @Published var updateTick: UInt = 0  // Forces UI refresh for live data
+    @Published var meterLeftDB: Float = -100
+    @Published var meterRightDB: Float = -100
+    @Published var busLevels: [(left: Float, right: Float)] = []
     
     private var timer: Timer?
     
@@ -501,6 +510,23 @@ class MacPerformViewModel: ObservableObject {
         }
         
         isPaused = fx.paused
+        
+        // Poll mixer output levels for meters
+        let levels = fx.getMixerLevels()
+        meterLeftDB = levels.left
+        meterRightDB = levels.right
+        
+        // Poll per-bus levels if multi-output is enabled
+        let outputMgr = MacOutputManager.shared
+        if outputMgr.multiOutputEnabled {
+            var newBusLevels: [(left: Float, right: Float)] = []
+            for i in 0..<outputMgr.buses.count {
+                newBusLevels.append(outputMgr.getLevels(for: i))
+            }
+            busLevels = newBusLevels
+        } else {
+            busLevels = []
+        }
     }
     
     private func checkAutoFollow(currentCue: FxCue) {
