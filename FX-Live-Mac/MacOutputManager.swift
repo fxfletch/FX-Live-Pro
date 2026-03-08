@@ -338,10 +338,13 @@ class MacOutputManager: ObservableObject {
         let mixer = getMixer(for: outputIndex)
         let defaultMixer = fx.audio.getDefaultMixer()
         
+        print("🔊 MacOutputManager.loadOnOutput: outputIndex=\(outputIndex) mixer=\(mixer) defaultMixer=\(defaultMixer) multiOutput=\(multiOutputEnabled)")
+        
         if mixer != defaultMixer && mixer != 0 {
             // Check if this bus uses channel-pair routing on a multi-channel device
             if outputIndex >= 0 && outputIndex < buses.count {
                 let bus = buses[outputIndex]
+                print("🔊   Bus \(bus.label): device=\(bus.bassDeviceIndex) pair=\(bus.channelPair) channels=\(bus.deviceChannelCount) initialised=\(bus.isInitialised)")
                 if bus.deviceChannelCount > 2 {
                     // Use channel-pair routing to direct audio to the correct stereo pair
                     return fx.audio.loadFile(withRouting: filePath, mixer: mixer, channelPair: Int32(bus.channelPair), mixerChannels: Int32(bus.deviceChannelCount))
@@ -351,6 +354,7 @@ class MacOutputManager: ObservableObject {
             return fx.audio.load(onMixer: filePath, mixer: mixer)
         } else {
             // Use the standard load (goes to default mixer)
+            print("🔊   Using default mixer (no bus-specific routing)")
             return fx.audio.load(filePath)
         }
     }
@@ -362,6 +366,7 @@ class MacOutputManager: ObservableObject {
         guard busIndex >= 0 && busIndex < buses.count else { return }
         let bus = buses[busIndex]
         let mixer = getMixer(for: busIndex)
+        print("🔊 testBus(\(busIndex)): mixer=\(mixer) device=\(bus.bassDeviceIndex) pair=\(bus.channelPair) channels=\(bus.deviceChannelCount) initialised=\(bus.isInitialised)")
         if mixer != 0 {
             if bus.deviceChannelCount > 2 {
                 fx.audio.playTestToneRouted(mixer, channelPair: Int32(bus.channelPair), mixerChannels: Int32(bus.deviceChannelCount))
