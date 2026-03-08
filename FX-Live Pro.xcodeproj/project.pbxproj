@@ -1,0 +1,766 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10001AA /* FX_Live_MacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001AB /* FX_Live_MacApp.swift */; };
+		A10002AA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002AB /* ContentView.swift */; };
+		A10003AA /* MacShowsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003AB /* MacShowsView.swift */; };
+		A10004AA /* MacPerformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10004AB /* MacPerformView.swift */; };
+		A10005AA /* MacDesignView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005AB /* MacDesignView.swift */; };
+		A10006AA /* MacMusicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10006AB /* MacMusicView.swift */; };
+		A10007AA /* MacFilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10007AB /* MacFilesView.swift */; };
+		A10008AA /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10008AB /* MacSettingsView.swift */; };
+		A10010AA /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10010AB /* Utils.swift */; };
+		A10011AA /* FxEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10011AB /* FxEngine.swift */; };
+		A10012AA /* FxShow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10012AB /* FxShow.swift */; };
+		A10013AA /* FxVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10013AB /* FxVersion.swift */; };
+		A10014AA /* FxCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10014AB /* FxCue.swift */; };
+		A10015AA /* FxEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10015AB /* FxEffect.swift */; };
+		A10016AA /* FxSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10016AB /* FxSettings.swift */; };
+		A10017AA /* FxEQ.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10017AB /* FxEQ.swift */; };
+		A10018AA /* FxDSP.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10018AB /* FxDSP.swift */; };
+		A10019AA /* propertyAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10019AB /* propertyAnimation.swift */; };
+		A10021AA /* audioEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = A10021AB /* audioEngine.m */; };
+		A10022AA /* EQSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = A10022AB /* EQSettings.m */; };
+		A10023AA /* DSPSettings.m in Sources */ = {isa = PBXBuildFile; fileRef = A10023AB /* DSPSettings.m */; };
+		A10024AA /* SwiftTryCatch.m in Sources */ = {isa = PBXBuildFile; fileRef = A10024AB /* SwiftTryCatch.m */; };
+		A10025AA /* ZipArchive.mm in Sources */ = {isa = PBXBuildFile; fileRef = A10025AB /* ZipArchive.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		A10026AA /* AudioOutputRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10026AB /* AudioOutputRoute.swift */; };
+		A10027AA /* MacOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10027AB /* MacOutputManager.swift */; };
+		A10028AA /* MacLevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10028AB /* MacLevelMeterView.swift */; };
+		A10031AA /* ioapi.c in Sources */ = {isa = PBXBuildFile; fileRef = A10031AB /* ioapi.c */; };
+		A10032AA /* mztools.c in Sources */ = {isa = PBXBuildFile; fileRef = A10032AB /* mztools.c */; };
+		A10033AA /* unzip.c in Sources */ = {isa = PBXBuildFile; fileRef = A10033AB /* unzip.c */; };
+		A10034AA /* zip.c in Sources */ = {isa = PBXBuildFile; fileRef = A10034AB /* zip.c */; };
+		A10041AA /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10041AB /* AudioToolbox.framework */; };
+		A10042AA /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10042AB /* AVFoundation.framework */; };
+		A10043AA /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10043AB /* CoreMedia.framework */; };
+		A10044AA /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10044AB /* CoreMIDI.framework */; };
+		A10045AA /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10045AB /* AVKit.framework */; };
+		A10046AA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10046AB /* StoreKit.framework */; };
+		A10047AA /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10047AB /* MultipeerConnectivity.framework */; };
+		A10048AA /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A10048AB /* libz.tbd */; };
+		A10060AA /* libbass.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10060AB /* libbass.dylib */; };
+		A10060BA /* libbass.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10060AB /* libbass.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A10061AA /* libbass_fx.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10061AB /* libbass_fx.dylib */; };
+		A10061BA /* libbass_fx.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10061AB /* libbass_fx.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A10062AA /* libbassenc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10062AB /* libbassenc.dylib */; };
+		A10062BA /* libbassenc.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10062AB /* libbassenc.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A10063AA /* libbassmidi.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10063AB /* libbassmidi.dylib */; };
+		A10063BA /* libbassmidi.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10063AB /* libbassmidi.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A10064AA /* libbassmix.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A10064AB /* libbassmix.dylib */; };
+		A10064BA /* libbassmix.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = A10064AB /* libbassmix.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A1D000AA /* Banging on door.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D000AB /* Banging on door.m4a */; };
+		A1D001AA /* Cell door close.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D001AB /* Cell door close.m4a */; };
+		A1D002AA /* Cell door open.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D002AB /* Cell door open.m4a */; };
+		A1D003AA /* Clock Chime 10.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D003AB /* Clock Chime 10.m4a */; };
+		A1D004AA /* Demo Show.fxLive in Resources */ = {isa = PBXBuildFile; fileRef = A1D004AB /* Demo Show.fxLive */; };
+		A1D005AA /* Door bell.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D005AB /* Door bell.m4a */; };
+		A1D006AA /* Door slam.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D006AB /* Door slam.m4a */; };
+		A1D007AA /* Drain clang.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D007AB /* Drain clang.m4a */; };
+		A1D008AA /* Heavy door open and close.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D008AB /* Heavy door open and close.m4a */; };
+		A1D009AA /* Heavy rain and distant thunder.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D009AB /* Heavy rain and distant thunder.m4a */; };
+		A1D010AA /* LineUp Tone.aif in Resources */ = {isa = PBXBuildFile; fileRef = A1D010AB /* LineUp Tone.aif */; };
+		A1D011AA /* Music - Drifter 1.3.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D011AB /* Music - Drifter 1.3.m4a */; };
+		A1D012AA /* Music - Ominous bed build.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D012AB /* Music - Ominous bed build.m4a */; };
+		A1D013AA /* Music - Synth electro bed.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D013AB /* Music - Synth electro bed.m4a */; };
+		A1D014AA /* Music - Year Less.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D014AB /* Music - Year Less.m4a */; };
+		A1D015AA /* Piano - Angels.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D015AB /* Piano - Angels.m4a */; };
+		A1D016AA /* Piano - Autumn Rain.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D016AB /* Piano - Autumn Rain.m4a */; };
+		A1D017AA /* Piano - Hope.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D017AB /* Piano - Hope.m4a */; };
+		A1D018AA /* Piano - London.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D018AB /* Piano - London.m4a */; };
+		A1D019AA /* Piano - Reflections.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D019AB /* Piano - Reflections.m4a */; };
+		A1D020AA /* Piano - Sandpit.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D020AB /* Piano - Sandpit.m4a */; };
+		A1D021AA /* Piano - The Birds.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D021AB /* Piano - The Birds.m4a */; };
+		A1D022AA /* Pistol Shot - Close perspective.aif in Resources */ = {isa = PBXBuildFile; fileRef = A1D022AB /* Pistol Shot - Close perspective.aif */; };
+		A1D023AA /* Police Siren.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D023AB /* Police Siren.m4a */; };
+		A1D024AA /* Seagulls with distant waves.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D024AB /* Seagulls with distant waves.m4a */; };
+		A1D025AA /* Seawash on shore.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D025AB /* Seawash on shore.m4a */; };
+		A1D026AA /* Sewer int soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D026AB /* Sewer int soundscape.m4a */; };
+		A1D027AA /* Silence.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D027AB /* Silence.m4a */; };
+		A1D028AA /* Thunder Clap Kick Big.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D028AB /* Thunder Clap Kick Big.m4a */; };
+		A1D029AA /* Thunder Clap Sharp Big.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D029AB /* Thunder Clap Sharp Big.m4a */; };
+		A1D030AA /* Thunder.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D030AB /* Thunder.m4a */; };
+		A1D031AA /* Village ext soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D031AB /* Village ext soundscape.m4a */; };
+		A1D032AA /* busy London street scene 1900 soundscape.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D032AB /* busy London street scene 1900 soundscape.m4a */; };
+		A1D033AA /* busy market close perpective.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D033AB /* busy market close perpective.m4a */; };
+		A1D034AA /* jail  - soundscape shouts etc.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D034AB /* jail  - soundscape shouts etc.m4a */; };
+		A1D035AA /* old shop bell.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D035AB /* old shop bell.m4a */; };
+		A1D036AA /* police whistle.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D036AB /* police whistle.m4a */; };
+		A1D037AA /* single bell tolls.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1D037AB /* single bell tolls.m4a */; };
+		B20001AA /* MacShowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20001AB /* MacShowManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1E00001 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A10060BA /* libbass.dylib in Embed Libraries */,
+				A10061BA /* libbass_fx.dylib in Embed Libraries */,
+				A10062BA /* libbassenc.dylib in Embed Libraries */,
+				A10063BA /* libbassmidi.dylib in Embed Libraries */,
+				A10064BA /* libbassmix.dylib in Embed Libraries */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A10000AA /* FX-Live-Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "FX-Live-Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10001AB /* FX_Live_MacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FX_Live_MacApp.swift; sourceTree = "<group>"; };
+		A10002AB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A10003AB /* MacShowsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacShowsView.swift; sourceTree = "<group>"; };
+		A10004AB /* MacPerformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacPerformView.swift; sourceTree = "<group>"; };
+		A10005AB /* MacDesignView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacDesignView.swift; sourceTree = "<group>"; };
+		A10006AB /* MacMusicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacMusicView.swift; sourceTree = "<group>"; };
+		A10007AB /* MacFilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacFilesView.swift; sourceTree = "<group>"; };
+		A10008AB /* MacSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsView.swift; sourceTree = "<group>"; };
+		A10009AB /* FX-Live-Mac-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FX-Live-Mac-Bridging-Header.h"; sourceTree = "<group>"; };
+		A10010AB /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Utils.swift; path = "../FX-Live2/FX-Live2/Utils.swift"; sourceTree = "<group>"; };
+		A10011AB /* FxEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxEngine.swift; path = "../FX-Live2/FX-Live2/FxEngine.swift"; sourceTree = "<group>"; };
+		A10012AB /* FxShow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxShow.swift; path = "../FX-Live2/FX-Live2/FxShow.swift"; sourceTree = "<group>"; };
+		A10013AB /* FxVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxVersion.swift; path = "../FX-Live2/FX-Live2/FxVersion.swift"; sourceTree = "<group>"; };
+		A10014AB /* FxCue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxCue.swift; path = "../FX-Live2/FX-Live2/FxCue.swift"; sourceTree = "<group>"; };
+		A10015AB /* FxEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxEffect.swift; path = "../FX-Live2/FX-Live2/FxEffect.swift"; sourceTree = "<group>"; };
+		A10016AB /* FxSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxSettings.swift; path = "../FX-Live2/FX-Live2/FxSettings.swift"; sourceTree = "<group>"; };
+		A10017AB /* FxEQ.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxEQ.swift; path = "../FX-Live2/FX-Live2/FxEQ.swift"; sourceTree = "<group>"; };
+		A10018AB /* FxDSP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FxDSP.swift; path = "../FX-Live2/FX-Live2/FxDSP.swift"; sourceTree = "<group>"; };
+		A10019AB /* propertyAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = propertyAnimation.swift; path = "../FX-Live2/FX-Live2/propertyAnimation.swift"; sourceTree = "<group>"; };
+		A10020AB /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AudioEngine.h; path = "../FX-Live2/FX-Live2/AudioEngine.h"; sourceTree = "<group>"; };
+		A10021AB /* audioEngine.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = audioEngine.m; path = "../FX-Live2/FX-Live2/audioEngine.m"; sourceTree = "<group>"; };
+		A10022AB /* EQSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = EQSettings.m; path = "../FX-Live2/FX-Live2/EQSettings.m"; sourceTree = "<group>"; };
+		A10022AC /* EQSettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = EQSettings.h; path = "../FX-Live2/FX-Live2/EQSettings.h"; sourceTree = "<group>"; };
+		A10023AB /* DSPSettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DSPSettings.m; path = "../FX-Live2/FX-Live2/DSPSettings.m"; sourceTree = "<group>"; };
+		A10023AC /* DSPSettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DSPSettings.h; path = "../FX-Live2/FX-Live2/DSPSettings.h"; sourceTree = "<group>"; };
+		A10024AB /* SwiftTryCatch.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SwiftTryCatch.m; path = "../FX-Live2/SwiftTryCatch.m"; sourceTree = "<group>"; };
+		A10024AC /* SwiftTryCatch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftTryCatch.h; path = "../FX-Live2/SwiftTryCatch.h"; sourceTree = "<group>"; };
+		A10025AB /* ZipArchive.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = ZipArchive.mm; path = "../FX-Live2/ZipArchive.mm"; sourceTree = "<group>"; };
+		A10025AC /* ZipArchive.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ZipArchive.h; path = "../FX-Live2/ZipArchive.h"; sourceTree = "<group>"; };
+		A10026AB /* AudioOutputRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioOutputRoute.swift; path = "../FX-Live2/FX-Live2/AudioOutputRoute.swift"; sourceTree = "<group>"; };
+		A10027AB /* MacOutputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOutputManager.swift; sourceTree = "<group>"; };
+		A10028AB /* MacLevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLevelMeterView.swift; sourceTree = "<group>"; };
+		A10030AB /* crypt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = crypt.h; path = "../FX-Live2/minizip/crypt.h"; sourceTree = "<group>"; };
+		A10031AB /* ioapi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = ioapi.c; path = "../FX-Live2/minizip/ioapi.c"; sourceTree = "<group>"; };
+		A10031AC /* ioapi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ioapi.h; path = "../FX-Live2/minizip/ioapi.h"; sourceTree = "<group>"; };
+		A10032AB /* mztools.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = mztools.c; path = "../FX-Live2/minizip/mztools.c"; sourceTree = "<group>"; };
+		A10032AC /* mztools.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = mztools.h; path = "../FX-Live2/minizip/mztools.h"; sourceTree = "<group>"; };
+		A10033AB /* unzip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unzip.c; path = "../FX-Live2/minizip/unzip.c"; sourceTree = "<group>"; };
+		A10033AC /* unzip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = unzip.h; path = "../FX-Live2/minizip/unzip.h"; sourceTree = "<group>"; };
+		A10034AB /* zip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = zip.c; path = "../FX-Live2/minizip/zip.c"; sourceTree = "<group>"; };
+		A10034AC /* zip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = zip.h; path = "../FX-Live2/minizip/zip.h"; sourceTree = "<group>"; };
+		A10041AB /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		A10042AB /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		A10043AB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		A10044AB /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
+		A10045AB /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		A10046AB /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		A10047AB /* MultipeerConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MultipeerConnectivity.framework; path = System/Library/Frameworks/MultipeerConnectivity.framework; sourceTree = SDKROOT; };
+		A10048AB /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		A10050AB /* bass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bass.h; path = "../FX-Live2/FX-Live2/bass.h"; sourceTree = "<group>"; };
+		A10051AB /* bassmix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bassmix.h; path = "../FX-Live2/FX-Live2/bassmix.h"; sourceTree = "<group>"; };
+		A10052AB /* bassmidi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bassmidi.h; path = "../FX-Live2/FX-Live2/bassmidi.h"; sourceTree = "<group>"; };
+		A10053AB /* bassenc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = bassenc.h; path = "../FX-Live2/FX-Live2/bassenc.h"; sourceTree = "<group>"; };
+		A10060AB /* libbass.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbass.dylib; path = libs/libbass.dylib; sourceTree = "<group>"; };
+		A10061AB /* libbass_fx.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbass_fx.dylib; path = libs/libbass_fx.dylib; sourceTree = "<group>"; };
+		A10062AB /* libbassenc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassenc.dylib; path = libs/libbassenc.dylib; sourceTree = "<group>"; };
+		A10063AB /* libbassmidi.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassmidi.dylib; path = libs/libbassmidi.dylib; sourceTree = "<group>"; };
+		A10064AB /* libbassmix.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbassmix.dylib; path = libs/libbassmix.dylib; sourceTree = "<group>"; };
+		A1D000AB /* Banging on door.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Banging on door.m4a"; sourceTree = "<group>"; };
+		A1D001AB /* Cell door close.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Cell door close.m4a"; sourceTree = "<group>"; };
+		A1D002AB /* Cell door open.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Cell door open.m4a"; sourceTree = "<group>"; };
+		A1D003AB /* Clock Chime 10.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Clock Chime 10.m4a"; sourceTree = "<group>"; };
+		A1D004AB /* Demo Show.fxLive */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = "Demo Show.fxLive"; sourceTree = "<group>"; };
+		A1D005AB /* Door bell.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Door bell.m4a"; sourceTree = "<group>"; };
+		A1D006AB /* Door slam.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Door slam.m4a"; sourceTree = "<group>"; };
+		A1D007AB /* Drain clang.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Drain clang.m4a"; sourceTree = "<group>"; };
+		A1D008AB /* Heavy door open and close.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Heavy door open and close.m4a"; sourceTree = "<group>"; };
+		A1D009AB /* Heavy rain and distant thunder.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Heavy rain and distant thunder.m4a"; sourceTree = "<group>"; };
+		A1D010AB /* LineUp Tone.aif */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = "LineUp Tone.aif"; sourceTree = "<group>"; };
+		A1D011AB /* Music - Drifter 1.3.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Drifter 1.3.m4a"; sourceTree = "<group>"; };
+		A1D012AB /* Music - Ominous bed build.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Ominous bed build.m4a"; sourceTree = "<group>"; };
+		A1D013AB /* Music - Synth electro bed.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Synth electro bed.m4a"; sourceTree = "<group>"; };
+		A1D014AB /* Music - Year Less.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Music - Year Less.m4a"; sourceTree = "<group>"; };
+		A1D015AB /* Piano - Angels.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Angels.m4a"; sourceTree = "<group>"; };
+		A1D016AB /* Piano - Autumn Rain.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Autumn Rain.m4a"; sourceTree = "<group>"; };
+		A1D017AB /* Piano - Hope.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Hope.m4a"; sourceTree = "<group>"; };
+		A1D018AB /* Piano - London.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - London.m4a"; sourceTree = "<group>"; };
+		A1D019AB /* Piano - Reflections.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Reflections.m4a"; sourceTree = "<group>"; };
+		A1D020AB /* Piano - Sandpit.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - Sandpit.m4a"; sourceTree = "<group>"; };
+		A1D021AB /* Piano - The Birds.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Piano - The Birds.m4a"; sourceTree = "<group>"; };
+		A1D022AB /* Pistol Shot - Close perspective.aif */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = "Pistol Shot - Close perspective.aif"; sourceTree = "<group>"; };
+		A1D023AB /* Police Siren.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Police Siren.m4a"; sourceTree = "<group>"; };
+		A1D024AB /* Seagulls with distant waves.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Seagulls with distant waves.m4a"; sourceTree = "<group>"; };
+		A1D025AB /* Seawash on shore.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Seawash on shore.m4a"; sourceTree = "<group>"; };
+		A1D026AB /* Sewer int soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Sewer int soundscape.m4a"; sourceTree = "<group>"; };
+		A1D027AB /* Silence.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = Silence.m4a; sourceTree = "<group>"; };
+		A1D028AB /* Thunder Clap Kick Big.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Thunder Clap Kick Big.m4a"; sourceTree = "<group>"; };
+		A1D029AB /* Thunder Clap Sharp Big.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Thunder Clap Sharp Big.m4a"; sourceTree = "<group>"; };
+		A1D030AB /* Thunder.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = Thunder.m4a; sourceTree = "<group>"; };
+		A1D031AB /* Village ext soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "Village ext soundscape.m4a"; sourceTree = "<group>"; };
+		A1D032AB /* busy London street scene 1900 soundscape.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "busy London street scene 1900 soundscape.m4a"; sourceTree = "<group>"; };
+		A1D033AB /* busy market close perpective.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "busy market close perpective.m4a"; sourceTree = "<group>"; };
+		A1D034AB /* jail  - soundscape shouts etc.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "jail  - soundscape shouts etc.m4a"; sourceTree = "<group>"; };
+		A1D035AB /* old shop bell.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "old shop bell.m4a"; sourceTree = "<group>"; };
+		A1D036AB /* police whistle.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "police whistle.m4a"; sourceTree = "<group>"; };
+		A1D037AB /* single bell tolls.m4a */ = {isa = PBXFileReference; lastKnownFileType = audio.m4a; path = "single bell tolls.m4a"; sourceTree = "<group>"; };
+		B20001AB /* MacShowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacShowManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1F00001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10041AA /* AudioToolbox.framework in Frameworks */,
+				A10042AA /* AVFoundation.framework in Frameworks */,
+				A10043AA /* CoreMedia.framework in Frameworks */,
+				A10044AA /* CoreMIDI.framework in Frameworks */,
+				A10045AA /* AVKit.framework in Frameworks */,
+				A10046AA /* StoreKit.framework in Frameworks */,
+				A10047AA /* MultipeerConnectivity.framework in Frameworks */,
+				A10048AA /* libz.tbd in Frameworks */,
+				A10060AA /* libbass.dylib in Frameworks */,
+				A10061AA /* libbass_fx.dylib in Frameworks */,
+				A10062AA /* libbassenc.dylib in Frameworks */,
+				A10063AA /* libbassmidi.dylib in Frameworks */,
+				A10064AA /* libbassmix.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1G00001 = {
+			isa = PBXGroup;
+			children = (
+				A1G00002 /* FX-Live-Mac */,
+				A1G00003 /* Shared Engine */,
+				A1G00004 /* BASS Audio */,
+				A1G00005 /* minizip */,
+				A1G00006 /* Frameworks */,
+				A1G00007 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1G00002 /* FX-Live-Mac */ = {
+			isa = PBXGroup;
+			children = (
+				A10001AB /* FX_Live_MacApp.swift */,
+				A10002AB /* ContentView.swift */,
+				A10003AB /* MacShowsView.swift */,
+				A10004AB /* MacPerformView.swift */,
+				A10005AB /* MacDesignView.swift */,
+				A10006AB /* MacMusicView.swift */,
+				A10007AB /* MacFilesView.swift */,
+				A10008AB /* MacSettingsView.swift */,
+				A10027AB /* MacOutputManager.swift */,
+				A10028AB /* MacLevelMeterView.swift */,
+				A10009AB /* FX-Live-Mac-Bridging-Header.h */,
+				B20001AB /* MacShowManager.swift */,
+				A1G00008 /* DemoResources */,
+			);
+			path = "FX-Live-Mac";
+			sourceTree = "<group>";
+		};
+		A1G00003 /* Shared Engine */ = {
+			isa = PBXGroup;
+			children = (
+				A10011AB /* FxEngine.swift */,
+				A10012AB /* FxShow.swift */,
+				A10013AB /* FxVersion.swift */,
+				A10014AB /* FxCue.swift */,
+				A10015AB /* FxEffect.swift */,
+				A10016AB /* FxSettings.swift */,
+				A10017AB /* FxEQ.swift */,
+				A10018AB /* FxDSP.swift */,
+				A10019AB /* propertyAnimation.swift */,
+				A10010AB /* Utils.swift */,
+				A10026AB /* AudioOutputRoute.swift */,
+				A10020AB /* AudioEngine.h */,
+				A10021AB /* audioEngine.m */,
+				A10022AC /* EQSettings.h */,
+				A10022AB /* EQSettings.m */,
+				A10023AC /* DSPSettings.h */,
+				A10023AB /* DSPSettings.m */,
+				A10024AC /* SwiftTryCatch.h */,
+				A10024AB /* SwiftTryCatch.m */,
+				A10025AC /* ZipArchive.h */,
+				A10025AB /* ZipArchive.mm */,
+			);
+			name = "Shared Engine";
+			sourceTree = "<group>";
+		};
+		A1G00004 /* BASS Audio */ = {
+			isa = PBXGroup;
+			children = (
+				A10050AB /* bass.h */,
+				A10051AB /* bassmix.h */,
+				A10052AB /* bassmidi.h */,
+				A10053AB /* bassenc.h */,
+			);
+			name = "BASS Audio";
+			sourceTree = "<group>";
+		};
+		A1G00005 /* minizip */ = {
+			isa = PBXGroup;
+			children = (
+				A10030AB /* crypt.h */,
+				A10031AB /* ioapi.c */,
+				A10031AC /* ioapi.h */,
+				A10032AB /* mztools.c */,
+				A10032AC /* mztools.h */,
+				A10033AB /* unzip.c */,
+				A10033AC /* unzip.h */,
+				A10034AB /* zip.c */,
+				A10034AC /* zip.h */,
+			);
+			name = minizip;
+			sourceTree = "<group>";
+		};
+		A1G00006 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A10041AB /* AudioToolbox.framework */,
+				A10042AB /* AVFoundation.framework */,
+				A10043AB /* CoreMedia.framework */,
+				A10044AB /* CoreMIDI.framework */,
+				A10045AB /* AVKit.framework */,
+				A10046AB /* StoreKit.framework */,
+				A10047AB /* MultipeerConnectivity.framework */,
+				A10048AB /* libz.tbd */,
+				A10060AB /* libbass.dylib */,
+				A10061AB /* libbass_fx.dylib */,
+				A10062AB /* libbassenc.dylib */,
+				A10063AB /* libbassmidi.dylib */,
+				A10064AB /* libbassmix.dylib */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A1G00007 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000AA /* FX-Live-Mac.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1G00008 /* DemoResources */ = {
+			isa = PBXGroup;
+			children = (
+				A1D000AB /* Banging on door.m4a */,
+				A1D001AB /* Cell door close.m4a */,
+				A1D002AB /* Cell door open.m4a */,
+				A1D003AB /* Clock Chime 10.m4a */,
+				A1D004AB /* Demo Show.fxLive */,
+				A1D005AB /* Door bell.m4a */,
+				A1D006AB /* Door slam.m4a */,
+				A1D007AB /* Drain clang.m4a */,
+				A1D008AB /* Heavy door open and close.m4a */,
+				A1D009AB /* Heavy rain and distant thunder.m4a */,
+				A1D010AB /* LineUp Tone.aif */,
+				A1D011AB /* Music - Drifter 1.3.m4a */,
+				A1D012AB /* Music - Ominous bed build.m4a */,
+				A1D013AB /* Music - Synth electro bed.m4a */,
+				A1D014AB /* Music - Year Less.m4a */,
+				A1D015AB /* Piano - Angels.m4a */,
+				A1D016AB /* Piano - Autumn Rain.m4a */,
+				A1D017AB /* Piano - Hope.m4a */,
+				A1D018AB /* Piano - London.m4a */,
+				A1D019AB /* Piano - Reflections.m4a */,
+				A1D020AB /* Piano - Sandpit.m4a */,
+				A1D021AB /* Piano - The Birds.m4a */,
+				A1D022AB /* Pistol Shot - Close perspective.aif */,
+				A1D023AB /* Police Siren.m4a */,
+				A1D024AB /* Seagulls with distant waves.m4a */,
+				A1D025AB /* Seawash on shore.m4a */,
+				A1D026AB /* Sewer int soundscape.m4a */,
+				A1D027AB /* Silence.m4a */,
+				A1D028AB /* Thunder Clap Kick Big.m4a */,
+				A1D029AB /* Thunder Clap Sharp Big.m4a */,
+				A1D030AB /* Thunder.m4a */,
+				A1D031AB /* Village ext soundscape.m4a */,
+				A1D032AB /* busy London street scene 1900 soundscape.m4a */,
+				A1D033AB /* busy market close perpective.m4a */,
+				A1D034AB /* jail  - soundscape shouts etc.m4a */,
+				A1D035AB /* old shop bell.m4a */,
+				A1D036AB /* police whistle.m4a */,
+				A1D037AB /* single bell tolls.m4a */,
+			);
+			path = DemoResources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1T00001 /* FX-Live-Mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1C00003 /* Build configuration list for PBXNativeTarget "FX-Live-Mac" */;
+			buildPhases = (
+				A1S00001 /* Sources */,
+				A1F00001 /* Frameworks */,
+				A1R00001 /* Resources */,
+				A1E00001 /* Embed Libraries */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "FX-Live-Mac";
+			productName = "FX-Live-Mac";
+			productReference = A10000AA /* FX-Live-Mac.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1P00001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A1T00001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A1C00001 /* Build configuration list for PBXProject "FX-Live Pro" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1G00001;
+			productRefGroup = A1G00007 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1T00001 /* FX-Live-Mac */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1R00001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1D000AA /* Banging on door.m4a in Resources */,
+				A1D001AA /* Cell door close.m4a in Resources */,
+				A1D002AA /* Cell door open.m4a in Resources */,
+				A1D003AA /* Clock Chime 10.m4a in Resources */,
+				A1D004AA /* Demo Show.fxLive in Resources */,
+				A1D005AA /* Door bell.m4a in Resources */,
+				A1D006AA /* Door slam.m4a in Resources */,
+				A1D007AA /* Drain clang.m4a in Resources */,
+				A1D008AA /* Heavy door open and close.m4a in Resources */,
+				A1D009AA /* Heavy rain and distant thunder.m4a in Resources */,
+				A1D010AA /* LineUp Tone.aif in Resources */,
+				A1D011AA /* Music - Drifter 1.3.m4a in Resources */,
+				A1D012AA /* Music - Ominous bed build.m4a in Resources */,
+				A1D013AA /* Music - Synth electro bed.m4a in Resources */,
+				A1D014AA /* Music - Year Less.m4a in Resources */,
+				A1D015AA /* Piano - Angels.m4a in Resources */,
+				A1D016AA /* Piano - Autumn Rain.m4a in Resources */,
+				A1D017AA /* Piano - Hope.m4a in Resources */,
+				A1D018AA /* Piano - London.m4a in Resources */,
+				A1D019AA /* Piano - Reflections.m4a in Resources */,
+				A1D020AA /* Piano - Sandpit.m4a in Resources */,
+				A1D021AA /* Piano - The Birds.m4a in Resources */,
+				A1D022AA /* Pistol Shot - Close perspective.aif in Resources */,
+				A1D023AA /* Police Siren.m4a in Resources */,
+				A1D024AA /* Seagulls with distant waves.m4a in Resources */,
+				A1D025AA /* Seawash on shore.m4a in Resources */,
+				A1D026AA /* Sewer int soundscape.m4a in Resources */,
+				A1D027AA /* Silence.m4a in Resources */,
+				A1D028AA /* Thunder Clap Kick Big.m4a in Resources */,
+				A1D029AA /* Thunder Clap Sharp Big.m4a in Resources */,
+				A1D030AA /* Thunder.m4a in Resources */,
+				A1D031AA /* Village ext soundscape.m4a in Resources */,
+				A1D032AA /* busy London street scene 1900 soundscape.m4a in Resources */,
+				A1D033AA /* busy market close perpective.m4a in Resources */,
+				A1D034AA /* jail  - soundscape shouts etc.m4a in Resources */,
+				A1D035AA /* old shop bell.m4a in Resources */,
+				A1D036AA /* police whistle.m4a in Resources */,
+				A1D037AA /* single bell tolls.m4a in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1S00001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B20001AA /* MacShowManager.swift in Sources */,
+				A10001AA /* FX_Live_MacApp.swift in Sources */,
+				A10002AA /* ContentView.swift in Sources */,
+				A10003AA /* MacShowsView.swift in Sources */,
+				A10004AA /* MacPerformView.swift in Sources */,
+				A10005AA /* MacDesignView.swift in Sources */,
+				A10006AA /* MacMusicView.swift in Sources */,
+				A10007AA /* MacFilesView.swift in Sources */,
+				A10008AA /* MacSettingsView.swift in Sources */,
+				A10011AA /* FxEngine.swift in Sources */,
+				A10012AA /* FxShow.swift in Sources */,
+				A10013AA /* FxVersion.swift in Sources */,
+				A10014AA /* FxCue.swift in Sources */,
+				A10015AA /* FxEffect.swift in Sources */,
+				A10016AA /* FxSettings.swift in Sources */,
+				A10017AA /* FxEQ.swift in Sources */,
+				A10018AA /* FxDSP.swift in Sources */,
+				A10019AA /* propertyAnimation.swift in Sources */,
+				A10010AA /* Utils.swift in Sources */,
+				A10026AA /* AudioOutputRoute.swift in Sources */,
+				A10027AA /* MacOutputManager.swift in Sources */,
+				A10028AA /* MacLevelMeterView.swift in Sources */,
+				A10021AA /* audioEngine.m in Sources */,
+				A10022AA /* EQSettings.m in Sources */,
+				A10023AA /* DSPSettings.m in Sources */,
+				A10024AA /* SwiftTryCatch.m in Sources */,
+				A10025AA /* ZipArchive.mm in Sources */,
+				A10031AA /* ioapi.c in Sources */,
+				A10032AA /* mztools.c in Sources */,
+				A10033AA /* unzip.c in Sources */,
+				A10034AA /* zip.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1B00001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1B00002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A1B00003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = V8266564RR;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../FX-Live2/FX-Live2\"",
+					"\"$(SRCROOT)/../FX-Live2\"",
+					"\"$(SRCROOT)/../FX-Live2/minizip\"",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = "FX-Live Pro";
+				INFOPLIST_KEY_CFBundleName = "FX-Live Pro";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Driftwood Software. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/libs\"",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.driftwoodsoftware.FX-Live-Mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FX-Live-Mac/FX-Live-Mac-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A1B00004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = V8266564RR;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../FX-Live2/FX-Live2\"",
+					"\"$(SRCROOT)/../FX-Live2\"",
+					"\"$(SRCROOT)/../FX-Live2/minizip\"",
+				);
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Driftwood Software. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/libs\"",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-lc++";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.driftwoodsoftware.FX-Live-Mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FX-Live-Mac/FX-Live-Mac-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1C00001 /* Build configuration list for PBXProject "FX-Live Pro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B00001 /* Debug */,
+				A1B00002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1C00003 /* Build configuration list for PBXNativeTarget "FX-Live-Mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B00003 /* Debug */,
+				A1B00004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1P00001 /* Project object */;
+}

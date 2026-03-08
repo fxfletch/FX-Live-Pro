@@ -1970,10 +1970,13 @@ class MacDesignViewModel: ObservableObject {
         cue.autoFollowEnd = autoFollowEnd
         fx.show.save()
         
-        // Force refresh
-        let updatedCues = cues
-        cues = []
-        cues = updatedCues
+        // Defer published property updates to avoid "Publishing changes from within view updates"
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let updatedCues = self.cues
+            self.cues = []
+            self.cues = updatedCues
+        }
     }
     
     func toggleMIDILearn() {
@@ -2191,16 +2194,19 @@ class MacDesignViewModel: ObservableObject {
             fx.audio.setPan(effect.stream, level: effectPan)
         }
         
-        // Update duration
-        let duration = effect.getDuration()
-        if duration > 0 {
-            effectDuration = duration
-        }
-        
         fx.show.save()
         
-        // Force refresh effect list
-        objectWillChange.send()
+        // Defer published property updates to avoid "Publishing changes from within view updates"
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            // Update duration
+            let duration = effect.getDuration()
+            if duration > 0 {
+                self.effectDuration = duration
+            }
+            // Force refresh effect list
+            self.objectWillChange.send()
+        }
     }
     
     func browseForFile() {

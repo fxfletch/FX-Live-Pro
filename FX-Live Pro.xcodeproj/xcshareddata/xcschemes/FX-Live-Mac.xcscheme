@@ -18,7 +18,7 @@
                BlueprintIdentifier = "A1T00001"
                BuildableName = "FX-Live-Mac.app"
                BlueprintName = "FX-Live-Mac"
-               ReferencedContainer = "container:FX-Live-Mac.xcodeproj">
+               ReferencedContainer = "container:FX-Live Pro.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -48,7 +48,7 @@
             BlueprintIdentifier = "A1T00001"
             BuildableName = "FX-Live-Mac.app"
             BlueprintName = "FX-Live-Mac"
-            ReferencedContainer = "container:FX-Live-Mac.xcodeproj">
+            ReferencedContainer = "container:FX-Live Pro.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -66,7 +66,7 @@
             BlueprintIdentifier = "A1T00001"
             BuildableName = "FX-Live-Mac.app"
             BlueprintName = "FX-Live-Mac"
-            ReferencedContainer = "container:FX-Live-Mac.xcodeproj">
+            ReferencedContainer = "container:FX-Live Pro.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

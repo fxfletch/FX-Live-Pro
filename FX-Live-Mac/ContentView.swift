@@ -39,7 +39,7 @@ struct ContentView: View {
                     .tag(tab)
             }
             .listStyle(.sidebar)
-            .navigationTitle("FX Live")
+            .navigationTitle("FX-Live Pro")
             .frame(minWidth: 160)
         } detail: {
             Group {

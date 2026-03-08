@@ -381,12 +381,20 @@ class MacOutputManager: ObservableObject {
     /// Get levels for a specific bus
     func getLevels(for busIndex: Int) -> (left: Float, right: Float) {
         guard busIndex >= 0 && busIndex < buses.count else { return (-100, -100) }
+        let bus = buses[busIndex]
         let mixer = getMixer(for: busIndex)
         if mixer == 0 { return (-100, -100) }
         
         var left: Float = -100
         var right: Float = -100
-        fx.audio.getLevelForMixer(mixer, left: &left, right: &right)
+        
+        // For multi-channel devices, read levels for the specific channel pair
+        if bus.deviceChannelCount > 2 {
+            fx.audio.getLevelForMixer(mixer, channelPair: Int32(bus.channelPair), mixerChannels: Int32(bus.deviceChannelCount), left: &left, right: &right)
+        } else {
+            fx.audio.getLevelForMixer(mixer, left: &left, right: &right)
+        }
+        
         return (max(-100, min(0, left)), max(-100, min(0, right)))
     }
     
