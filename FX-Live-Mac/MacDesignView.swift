@@ -6,9 +6,9 @@
 //  Full-featured design view with audio timeline, waveform, scrubbing,
 //  transport controls, and inline property editing
 //
-
 import SwiftUI
 import UniformTypeIdentifiers
+import AVFoundation
 
 // MARK: - Main Design View
 
@@ -364,6 +364,9 @@ struct MacCuePropertiesSection: View {
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 13))
                     .onSubmit { viewModel.saveCueProperties() }
+                    .onChange(of: viewModel.cueName) { _, _ in
+                        viewModel.saveCueProperties()
+                    }
             }
             
             // Notes
@@ -724,116 +727,81 @@ struct MacEffectFileSection: View {
     }
 }
 
-// MARK: - Full Waveform Trim View
+// MARK: - Full Waveform Trim View (Zoomable)
 
-/// Shows the complete audio file waveform with draggable in/out trim handles,
-/// dimmed regions outside the trim, and playhead position indicator
+/// Shows the complete audio file waveform with draggable in/out trim handles.
+/// Scroll/trackpad-swipe to pan when zoomed. Use zoom buttons or pinch to zoom.
+/// Drag trim handle markers to adjust in/out points.
 struct MacFullWaveformTrimView: View {
     @ObservedObject var viewModel: MacDesignViewModel
     @State private var draggingHandle: TrimHandle? = nil
     
     private enum TrimHandle { case inPoint, outPoint }
     
-    private let timelineHeight: CGFloat = 80
-    private let barCount: Int = 200
-    private let handleHitArea: CGFloat = 24
+    private let waveformHeight: CGFloat = 100
+    private let rulerHeight: CGFloat = 22
+    private let handleWidth: CGFloat = 20
+    
+    private var barCount: Int {
+        min(Int(CGFloat(200) * viewModel.trimZoomLevel), 2000)
+    }
     
     var body: some View {
         VStack(spacing: 4) {
-            // Header
-            HStack {
-                Text("FULL FILE WAVEFORM")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.secondary)
-                
-                if viewModel.fileDuration > 0 && viewModel.effectDuration > 0 {
-                    // Trimmed duration badge
-                    Text("Trimmed: \(formatDetailedTime(viewModel.effectDuration))")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.accentColor.opacity(0.6)))
-                }
-                
-                Spacer()
-                
-                if viewModel.fileDuration > 0 {
-                    Text("File: \(formatDetailedTime(viewModel.fileDuration))")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-            }
+            trimHeaderRow
             
-            // Waveform with trim handles
-            GeometryReader { geometry in
-                let w = geometry.size.width
-                let inFrac = viewModel.fileDuration > 0 ? CGFloat(viewModel.inPoint / viewModel.fileDuration) : 0
-                let outFrac = viewModel.fileDuration > 0 ? CGFloat(viewModel.outPoint / viewModel.fileDuration) : 1
-                let inX = w * inFrac
-                let outX = w * outFrac
+            GeometryReader { outerGeo in
+                let viewportWidth = outerGeo.size.width
+                let contentWidth = viewportWidth * viewModel.trimZoomLevel
                 
-                // Base waveform layer (clipped to rounded rect)
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .textBackgroundColor))
-                    
-                    // Full waveform bars
-                    fullWaveformBars(in: geometry, inFrac: Float(inFrac), outFrac: Float(outFrac))
-                    
-                    // Dimmed region before in point
-                    if viewModel.fileDuration > 0 && inX > 0 {
-                        Rectangle()
-                            .fill(Color.black.opacity(0.35))
-                            .frame(width: max(0, inX), height: timelineHeight)
-                    }
-                    
-                    // Dimmed region after out point
-                    if viewModel.fileDuration > 0 && outX < w {
-                        Rectangle()
-                            .fill(Color.black.opacity(0.35))
-                            .frame(width: max(0, w - outX), height: timelineHeight)
-                            .offset(x: outX)
-                    }
-                    
-                    // Playhead position (mapped to full file)
-                    if viewModel.fileDuration > 0 && viewModel.effectDuration > 0 {
-                        let absolutePos = viewModel.inPoint + viewModel.currentPlaybackPosition
-                        let posFrac = CGFloat(absolutePos / viewModel.fileDuration)
-                        let posX = w * min(max(posFrac, 0), 1)
+                AlwaysScrollableHorizontalView(
+                    contentWidth: contentWidth,
+                    contentHeight: waveformHeight + rulerHeight
+                ) {
+                    VStack(spacing: 0) {
+                        // Time ruler
+                        trimTimeRuler(contentWidth: contentWidth)
+                            .frame(width: contentWidth, height: rulerHeight)
                         
-                        Rectangle()
-                            .fill(viewModel.isPreviewingEffect ? Color.green : Color.white)
-                            .frame(width: 1.5)
-                            .shadow(color: (viewModel.isPreviewingEffect ? Color.green : Color.white).opacity(0.6), radius: 2)
-                            .offset(x: posX - 0.75)
-                    }
-                    
-                    // No audio message
-                    if viewModel.fileDuration <= 0 {
-                        Text("No audio loaded")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // Waveform layer
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Color(nsColor: .textBackgroundColor))
+                            
+                            trimWaveformCanvas(contentWidth: contentWidth)
+                            trimDimmedRegions(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            trimPlayhead(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            
+                            if viewModel.fileDuration <= 0 {
+                                Text("No audio loaded")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                            
+                            // Draggable trim handles
+                            if viewModel.fileDuration > 0 {
+                                trimHandleOverlay(
+                                    label: "IN", color: .green,
+                                    fraction: CGFloat(viewModel.inPoint / viewModel.fileDuration),
+                                    contentWidth: contentWidth,
+                                    handleType: .inPoint
+                                )
+                                
+                                trimHandleOverlay(
+                                    label: "OUT", color: .orange,
+                                    fraction: CGFloat(viewModel.outPoint / viewModel.fileDuration),
+                                    contentWidth: contentWidth,
+                                    handleType: .outPoint
+                                )
+                            }
+                        }
+                        .frame(width: contentWidth, height: waveformHeight)
                     }
                 }
-                .frame(height: timelineHeight)
+                .frame(height: waveformHeight + rulerHeight + (viewModel.trimZoomLevel > 1 ? 15 : 0))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
-                // Trim handle markers — rendered OUTSIDE the clip so they're always visible
-                .overlay(
-                    ZStack(alignment: .leading) {
-                        if viewModel.fileDuration > 0 {
-                            // In point marker
-                            trimMarker(label: "IN", color: .green, x: inX, isActive: draggingHandle == .inPoint)
-                            
-                            // Out point marker
-                            trimMarker(label: "OUT", color: .orange, x: outX, isActive: draggingHandle == .outPoint)
-                        }
-                    }
-                    .frame(height: timelineHeight)
-                    , alignment: .leading
-                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(
@@ -841,103 +809,25 @@ struct MacFullWaveformTrimView: View {
                             lineWidth: draggingHandle != nil ? 1.5 : 0.5
                         )
                 )
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            guard viewModel.fileDuration > 0 else { return }
-                            let x = value.location.x
-                            let startX = value.startLocation.x
-                            
-                            // On first touch, decide what to drag
-                            if draggingHandle == nil {
-                                let inHandleX = w * CGFloat(viewModel.inPoint / viewModel.fileDuration)
-                                let outHandleX = w * CGFloat(viewModel.outPoint / viewModel.fileDuration)
-                                
-                                let distToIn = abs(startX - inHandleX)
-                                let distToOut = abs(startX - outHandleX)
-                                
-                                if distToIn < handleHitArea && distToOut < handleHitArea {
-                                    draggingHandle = distToIn <= distToOut ? .inPoint : .outPoint
-                                } else if distToIn < handleHitArea {
-                                    draggingHandle = .inPoint
-                                } else if distToOut < handleHitArea {
-                                    draggingHandle = .outPoint
-                                }
-                            }
-                            
-                            let fraction = Float(x / w)
-                            let clampedFraction = min(max(fraction, 0), 1)
-                            let timePos = clampedFraction * viewModel.fileDuration
-                            
-                            switch draggingHandle {
-                            case .inPoint:
-                                viewModel.updateInPointAbsolute(timePos)
-                            case .outPoint:
-                                viewModel.updateOutPointAbsolute(timePos)
-                            case nil:
-                                break
-                            }
-                        }
-                        .onEnded { _ in
-                            if draggingHandle != nil {
-                                viewModel.finishTrimDrag()
-                            }
-                            draggingHandle = nil
-                        }
-                )
             }
-            .frame(height: timelineHeight)
+            .frame(height: waveformHeight + rulerHeight + (viewModel.trimZoomLevel > 1 ? 15 : 0))
             
-            // Time labels — positioned to track the markers
-            if viewModel.fileDuration > 0 {
-                HStack {
-                    Text(formatDetailedTime(0))
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrowtriangle.right.fill")
-                            .font(.system(size: 6))
-                        Text("IN \(formatDetailedTime(viewModel.inPoint))")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    }
-                    .foregroundColor(.green)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 3) {
-                        Text("OUT \(formatDetailedTime(viewModel.outPoint))")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        Image(systemName: "arrowtriangle.left.fill")
-                            .font(.system(size: 6))
-                    }
-                    .foregroundColor(.orange)
-                    
-                    Spacer()
-                    
-                    Text(formatDetailedTime(viewModel.fileDuration))
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 4)
-            }
+            trimTimeLabelsRow
         }
     }
     
-    // MARK: - Trim Marker
+    // MARK: - Draggable Trim Handle
     
-    private func trimMarker(label: String, color: Color, x: CGFloat, isActive: Bool) -> some View {
-        ZStack {
-            // Vertical line — full height
+    private func trimHandleOverlay(label: String, color: Color, fraction: CGFloat, contentWidth: CGFloat, handleType: TrimHandle) -> some View {
+        let x = contentWidth * fraction
+        
+        return ZStack {
+            // Vertical line
             Rectangle()
                 .fill(color)
-                .frame(width: isActive ? 3 : 2, height: timelineHeight)
-                .shadow(color: color.opacity(0.6), radius: isActive ? 4 : 2)
+                .frame(width: draggingHandle == handleType ? 3 : 2, height: waveformHeight)
+                .shadow(color: color.opacity(0.6), radius: draggingHandle == handleType ? 4 : 2)
             
-            // Label tab at top
             VStack(spacing: 0) {
                 Text(label)
                     .font(.system(size: 9, weight: .heavy))
@@ -947,10 +837,9 @@ struct MacFullWaveformTrimView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 3)
                             .fill(color)
-                            .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1)
+                            .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
                     )
                 
-                // Arrow pointing down to the line
                 Image(systemName: "arrowtriangle.down.fill")
                     .font(.system(size: 6))
                     .foregroundColor(color)
@@ -958,54 +847,274 @@ struct MacFullWaveformTrimView: View {
                 
                 Spacer()
                 
-                // Bottom grip handle
                 RoundedRectangle(cornerRadius: 2)
                     .fill(color)
-                    .frame(width: 10, height: 18)
+                    .frame(width: 14, height: 22)
                     .overlay(
                         VStack(spacing: 2) {
                             ForEach(0..<3, id: \.self) { _ in
                                 RoundedRectangle(cornerRadius: 0.5)
                                     .fill(Color.white.opacity(0.6))
-                                    .frame(width: 5, height: 1)
+                                    .frame(width: 6, height: 1)
                             }
                         }
                     )
-                    .shadow(color: Color.black.opacity(0.3), radius: 2)
+                    .shadow(color: .black.opacity(0.3), radius: 2)
             }
-            .frame(height: timelineHeight)
+            .frame(height: waveformHeight)
         }
-        .offset(x: x - 1)
+        .frame(width: handleWidth, height: waveformHeight)
+        .contentShape(Rectangle())
+        .offset(x: x - handleWidth / 2)
+        .gesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    draggingHandle = handleType
+                    let newX = x + value.translation.width
+                    let newFrac = Float(max(0, min(newX / contentWidth, 1)))
+                    let timePos = newFrac * viewModel.fileDuration
+                    switch handleType {
+                    case .inPoint:
+                        viewModel.updateInPointAbsolute(timePos)
+                    case .outPoint:
+                        viewModel.updateOutPointAbsolute(timePos)
+                    }
+                }
+                .onEnded { _ in
+                    draggingHandle = nil
+                    viewModel.finishTrimDrag()
+                }
+        )
+        .onHover { hovering in
+            if hovering { NSCursor.resizeLeftRight.push() }
+            else { NSCursor.pop() }
+        }
     }
     
-    // MARK: - Full Waveform Bars
+    // MARK: - Header
     
-    private func fullWaveformBars(in geometry: GeometryProxy, inFrac: Float, outFrac: Float) -> some View {
-        HStack(spacing: 0.5) {
-            ForEach(0..<barCount, id: \.self) { index in
-                let height = barHeight(for: index)
-                let barFrac = Float(index) / Float(barCount)
-                let isInTrimRegion = barFrac >= inFrac && barFrac <= outFrac
+    private var trimHeaderRow: some View {
+        HStack(spacing: 8) {
+            Text("FULL FILE WAVEFORM")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            if viewModel.fileDuration > 0 && viewModel.effectDuration > 0 {
+                Text("Trimmed: \(formatDetailedTime(viewModel.effectDuration))")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.6)))
+            }
+            
+            Spacer()
+            
+            // Zoom controls
+            if viewModel.fileDuration > 0 {
+                HStack(spacing: 4) {
+                    Button(action: { viewModel.zoomOutTrimView() }) {
+                        Image(systemName: "minus.magnifyingglass")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.trimZoomLevel <= 1.0)
+                    .help("Zoom Out")
+                    
+                    Text("\(Int(viewModel.trimZoomLevel * 100))%")
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 38)
+                    
+                    Button(action: { viewModel.zoomInTrimView() }) {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.trimZoomLevel >= 20.0)
+                    .help("Zoom In")
+                    
+                    Divider().frame(height: 12)
+                    
+                    Button(action: { viewModel.resetTrimZoom() }) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Fit to Window")
+                    .disabled(viewModel.trimZoomLevel <= 1.0)
+                    
+                    Button(action: { viewModel.zoomToTrimRegion() }) {
+                        Image(systemName: "crop")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Zoom to Trim Region")
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: .controlBackgroundColor)))
+            }
+            
+            if viewModel.fileDuration > 0 {
+                Text("File: \(formatDetailedTime(viewModel.fileDuration))")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    // MARK: - Time Ruler
+    
+    private func trimTimeRuler(contentWidth: CGFloat) -> some View {
+        Canvas { context, size in
+            let duration = viewModel.fileDuration
+            guard duration > 0 else { return }
+            
+            let pixelsPerSecond = size.width / CGFloat(duration)
+            let tickInterval = rulerTickInterval(pixelsPerSecond: pixelsPerSecond)
+            
+            var time: Float = 0
+            while time <= duration {
+                let x = CGFloat(time / duration) * size.width
                 
-                RoundedRectangle(cornerRadius: 0.5)
-                    .fill(isInTrimRegion ? Color.accentColor.opacity(0.55) : Color.gray.opacity(0.15))
-                    .frame(height: timelineHeight * height)
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: x, y: size.height))
+                    p.addLine(to: CGPoint(x: x, y: size.height - 10))
+                }, with: .color(.secondary.opacity(0.6)), lineWidth: 0.5)
+                
+                context.draw(
+                    Text(formatDetailedTime(time))
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary),
+                    at: CGPoint(x: x + 2, y: 6), anchor: .leading
+                )
+                
+                if tickInterval > 0 {
+                    for sub in 1..<4 {
+                        let subTime = time + tickInterval * Float(sub) / 4.0
+                        if subTime > duration { break }
+                        let subX = CGFloat(subTime / duration) * size.width
+                        context.stroke(Path { p in
+                            p.move(to: CGPoint(x: subX, y: size.height))
+                            p.addLine(to: CGPoint(x: subX, y: size.height - 5))
+                        }, with: .color(.secondary.opacity(0.3)), lineWidth: 0.5)
+                    }
+                }
+                
+                time += tickInterval
+                if tickInterval <= 0 { break }
             }
+            
+            context.stroke(Path { p in
+                p.move(to: CGPoint(x: 0, y: size.height - 0.5))
+                p.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
+            }, with: .color(.secondary.opacity(0.3)), lineWidth: 0.5)
         }
-        .frame(height: timelineHeight)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
     }
     
-    private func barHeight(for index: Int) -> CGFloat {
-        if !viewModel.fullWaveformData.isEmpty {
-            let dataIndex = index * viewModel.fullWaveformData.count / barCount
-            let clampedIndex = min(dataIndex, viewModel.fullWaveformData.count - 1)
-            let peak = CGFloat(viewModel.fullWaveformData[clampedIndex])
-            return max(0.03, min(0.95, 0.03 + peak * 0.92))
+    private func rulerTickInterval(pixelsPerSecond: CGFloat) -> Float {
+        for interval in [Float(0.1), 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300] {
+            if pixelsPerSecond * CGFloat(interval) >= 60 { return interval }
         }
-        // Fallback
-        let n = Double(index) / Double(barCount)
-        let base = 0.15 + (sin(n * .pi * 6) * 0.3 + sin(n * .pi * 13) * 0.15 + 0.5) * sin(n * .pi) * 0.5
-        return max(0.03, min(0.95, CGFloat(base)))
+        return 300
+    }
+    
+    // MARK: - Waveform Canvas
+    
+    private func trimWaveformCanvas(contentWidth: CGFloat) -> some View {
+        let inFrac = viewModel.fileDuration > 0 ? Float(viewModel.inPoint / viewModel.fileDuration) : Float(0)
+        let outFrac = viewModel.fileDuration > 0 ? Float(viewModel.outPoint / viewModel.fileDuration) : Float(1)
+        let n = barCount
+        return Canvas { context, size in
+            let barW = max(1.0, size.width / CGFloat(n) - 0.5)
+            for i in 0..<n {
+                let f = Float(i) / Float(n)
+                let inTrim = f >= inFrac && f <= outFrac
+                let h = trimBarHeight(for: i, totalBars: n)
+                let bh = size.height * h
+                let rect = CGRect(x: CGFloat(i) * (barW + 0.5), y: (size.height - bh) / 2, width: barW, height: bh)
+                context.fill(Path(roundedRect: rect, cornerRadius: 0.5),
+                             with: .color(inTrim ? .accentColor.opacity(0.55) : .gray.opacity(0.15)))
+            }
+        }
+        .frame(width: contentWidth, height: waveformHeight)
+        .allowsHitTesting(false)
+    }
+    
+    // MARK: - Dimmed Regions
+    
+    private func trimDimmedRegions(contentWidth: CGFloat) -> some View {
+        let inX = viewModel.fileDuration > 0 ? contentWidth * CGFloat(viewModel.inPoint / viewModel.fileDuration) : 0
+        let outX = viewModel.fileDuration > 0 ? contentWidth * CGFloat(viewModel.outPoint / viewModel.fileDuration) : contentWidth
+        return ZStack(alignment: .leading) {
+            if inX > 0 {
+                Rectangle().fill(Color.black.opacity(0.35)).frame(width: inX, height: waveformHeight)
+            }
+            if outX < contentWidth {
+                Rectangle().fill(Color.black.opacity(0.35)).frame(width: contentWidth - outX, height: waveformHeight).offset(x: outX)
+            }
+        }
+    }
+    
+    // MARK: - Playhead
+    
+    private func trimPlayhead(contentWidth: CGFloat) -> some View {
+        Group {
+            if viewModel.fileDuration > 0 && viewModel.effectDuration > 0 {
+                let posX = contentWidth * CGFloat(min(max((viewModel.inPoint + viewModel.currentPlaybackPosition) / viewModel.fileDuration, 0), 1))
+                Rectangle()
+                    .fill(viewModel.isPreviewingEffect ? Color.green : Color.white)
+                    .frame(width: 2)
+                    .shadow(color: (viewModel.isPreviewingEffect ? Color.green : .white).opacity(0.6), radius: 2)
+                    .offset(x: posX - 1)
+            }
+        }
+    }
+    
+    // MARK: - Time Labels
+    
+    private var trimTimeLabelsRow: some View {
+        Group {
+            if viewModel.fileDuration > 0 {
+                HStack {
+                    Text(formatDetailedTime(0))
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrowtriangle.right.fill").font(.system(size: 6))
+                        Text("IN \(formatDetailedTime(viewModel.inPoint))")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    }.foregroundColor(.green)
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Text("OUT \(formatDetailedTime(viewModel.outPoint))")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        Image(systemName: "arrowtriangle.left.fill").font(.system(size: 6))
+                    }.foregroundColor(.orange)
+                    Spacer()
+                    Text(formatDetailedTime(viewModel.fileDuration))
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+    }
+    
+    // MARK: - Bar Height
+    
+    private func trimBarHeight(for index: Int, totalBars: Int) -> CGFloat {
+        let data = viewModel.trimZoomLevel > 1.5 && !viewModel.hiResFullWaveformData.isEmpty
+            ? viewModel.hiResFullWaveformData : viewModel.fullWaveformData
+        if !data.isEmpty {
+            let i = min(index * data.count / totalBars, data.count - 1)
+            return max(0.03, min(0.95, 0.03 + CGFloat(data[i]) * 0.92))
+        }
+        let n = Double(index) / Double(totalBars)
+        return max(0.03, min(0.95, CGFloat(0.15 + (sin(n * .pi * 6) * 0.3 + sin(n * .pi * 13) * 0.15 + 0.5) * sin(n * .pi) * 0.5)))
     }
     
     private func formatDetailedTime(_ seconds: Float) -> String {
@@ -1013,6 +1122,59 @@ struct MacFullWaveformTrimView: View {
         let mins = Int(total) / 60
         let secs = total - Float(mins * 60)
         return String(format: "%d:%05.2f", mins, secs)
+    }
+}
+
+// MARK: - Always-Visible Horizontal ScrollView (NSScrollView wrapper)
+
+/// An NSScrollView wrapper that always shows the horizontal scrollbar when content is wider than the viewport.
+/// This solves macOS's default behavior of auto-hiding scrollbars.
+struct AlwaysScrollableHorizontalView<Content: View>: NSViewRepresentable {
+    let contentWidth: CGFloat
+    let contentHeight: CGFloat
+    @ViewBuilder let content: () -> Content
+    
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasHorizontalScroller = true
+        scrollView.hasVerticalScroller = false
+        scrollView.autohidesScrollers = false
+        scrollView.scrollerStyle = .legacy
+        scrollView.horizontalScrollElasticity = .allowed
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        
+        let hostingView = NSHostingView(rootView: content())
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        
+        let documentView = NSView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        documentView.addSubview(hostingView)
+        
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            hostingView.topAnchor.constraint(equalTo: documentView.topAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
+        ])
+        
+        scrollView.documentView = documentView
+        
+        return scrollView
+    }
+    
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        // Update the hosted SwiftUI content
+        if let documentView = scrollView.documentView,
+           let hostingView = documentView.subviews.first as? NSHostingView<Content> {
+            hostingView.rootView = content()
+        }
+        
+        // Update document size
+        scrollView.documentView?.frame.size = NSSize(width: contentWidth, height: contentHeight)
+        
+        // Show/hide scroller based on whether content overflows
+        scrollView.hasHorizontalScroller = contentWidth > scrollView.bounds.width
     }
 }
 
@@ -1029,54 +1191,35 @@ struct MacTrimControlsSection: View {
                     Text("In Point")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.green)
-                    
                     HStack(spacing: 6) {
-                        // In point value
                         TextField("", value: $viewModel.inPoint, format: .number.precision(.fractionLength(2)))
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 65)
                             .font(.system(size: 12, design: .monospaced))
                             .onSubmit { viewModel.saveEffectProperties() }
-                        Text("s")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        // Set at playhead
+                        Text("s").font(.caption).foregroundColor(.secondary)
                         Button(action: { viewModel.setInPointAtPlayhead() }) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 12))
+                            Image(systemName: "location.fill").font(.system(size: 12))
                         }
-                        .help("Set in point at playhead")
-                        .buttonStyle(.bordered)
-                        
-                        // Preview in
+                        .help("Set in point at playhead").buttonStyle(.bordered)
                         Button(action: { viewModel.sampleInPoint() }) {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 12))
+                            Image(systemName: "speaker.wave.2.fill").font(.system(size: 12))
                         }
-                        .help("Preview in point")
-                        .buttonStyle(.bordered)
-                        .tint(.green)
+                        .help("Preview in point").buttonStyle(.bordered).tint(.green)
                     }
                 }
                 
                 Spacer()
                 
-                // Reset button
                 VStack(spacing: 4) {
-                    Text(" ")
-                        .font(.system(size: 10, weight: .semibold))
-                    
+                    Text(" ").font(.system(size: 10, weight: .semibold))
                     Button(action: { viewModel.resetTrimPoints() }) {
                         VStack(spacing: 2) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 14))
-                            Text("Reset")
-                                .font(.system(size: 9))
+                            Image(systemName: "arrow.counterclockwise").font(.system(size: 14))
+                            Text("Reset").font(.system(size: 9))
                         }
                     }
-                    .help("Reset to full file")
-                    .buttonStyle(.bordered)
+                    .help("Reset to full file").buttonStyle(.bordered)
                     .disabled(viewModel.fileDuration <= 0)
                 }
                 
@@ -1087,34 +1230,21 @@ struct MacTrimControlsSection: View {
                     Text("Out Point")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.orange)
-                    
                     HStack(spacing: 6) {
-                        // Preview out
                         Button(action: { viewModel.sampleOutPoint() }) {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 12))
+                            Image(systemName: "speaker.wave.2.fill").font(.system(size: 12))
                         }
-                        .help("Preview out point")
-                        .buttonStyle(.bordered)
-                        .tint(.orange)
-                        
-                        // Set at playhead
+                        .help("Preview out point").buttonStyle(.bordered).tint(.orange)
                         Button(action: { viewModel.setOutPointAtPlayhead() }) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 12))
+                            Image(systemName: "location.fill").font(.system(size: 12))
                         }
-                        .help("Set out point at playhead")
-                        .buttonStyle(.bordered)
-                        
-                        // Out point value
+                        .help("Set out point at playhead").buttonStyle(.bordered)
                         TextField("", value: $viewModel.outPoint, format: .number.precision(.fractionLength(2)))
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 65)
                             .font(.system(size: 12, design: .monospaced))
                             .onSubmit { viewModel.saveEffectProperties() }
-                        Text("s")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        Text("s").font(.caption).foregroundColor(.secondary)
                     }
                 }
             }
@@ -1124,151 +1254,109 @@ struct MacTrimControlsSection: View {
     }
 }
 
-// MARK: - Audio Timeline View (Mac) - Trimmed Region Playback
+// MARK: - Audio Timeline View (Mac) - Trimmed Region Playback (Zoomable)
 
 struct MacAudioTimelineView: View {
     @ObservedObject var viewModel: MacDesignViewModel
     
-    private let timelineHeight: CGFloat = 80
-    private let barCount: Int = 200
+    private let waveformHeight: CGFloat = 100
+    private let rulerHeight: CGFloat = 22
+    
+    /// Dynamic bar count scales with zoom
+    private var barCount: Int {
+        let base = 200
+        let zoomed = Int(CGFloat(base) * viewModel.timelineZoomLevel)
+        return min(zoomed, 2000)
+    }
     
     var body: some View {
         VStack(spacing: 6) {
-            // Timeline label row
-            HStack {
-                Text("PLAYBACK TIMELINE")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.secondary)
-                
-                // Duration badge
-                if viewModel.effectDuration > 0 {
-                    Text(formatTimeValue(viewModel.effectDuration))
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.secondary.opacity(0.5)))
-                }
-                
-                if viewModel.effectLoop {
-                    HStack(spacing: 3) {
-                        Image(systemName: "repeat")
-                            .font(.system(size: 9))
-                        Text("LOOP")
-                            .font(.system(size: 9, weight: .bold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.orange))
-                }
-                
-                Spacer()
-                
-                // Go to In
-                Button(action: { viewModel.goToInPoint() }) {
-                    Image(systemName: "backward.end.fill")
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.green)
-                .help("Go to In point")
-                .disabled(viewModel.effectDuration <= 0)
-                
-                // Play/pause from current position
-                Button(action: { viewModel.togglePlayFromPosition() }) {
-                    Image(systemName: viewModel.isPreviewingEffect ? "pause.fill" : "play.fill")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(viewModel.isPreviewingEffect ? Color.red : Color.green)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(viewModel.effectDuration <= 0)
-                .opacity(viewModel.effectDuration <= 0 ? 0.4 : 1.0)
-                
-                // Go to Out
-                Button(action: { viewModel.goToOutPoint() }) {
-                    Image(systemName: "forward.end.fill")
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.orange)
-                .help("Go to Out point")
-                .disabled(viewModel.effectDuration <= 0)
-                
-                // Time display
-                Text(timeDisplay)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundColor(viewModel.isPreviewingEffect ? .green : .secondary)
-            }
+            // Timeline header row with zoom controls
+            timelineHeaderRow
             
-            // Timeline visualization
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .textBackgroundColor))
-                    
-                    // Waveform bars
-                    waveformBars(in: geometry)
-                    
-                    // Fade-in overlay
-                    if viewModel.effectDuration > 0 && viewModel.fadeIn > 0 {
-                        fadeInOverlay(in: geometry)
-                    }
-                    
-                    // Fade-out overlay
-                    if viewModel.effectDuration > 0 && viewModel.fadeOut > 0 {
-                        fadeOutOverlay(in: geometry)
-                    }
-                    
-                    // Progress fill
-                    if viewModel.effectDuration > 0 {
-                        let progress = CGFloat(viewModel.currentPlaybackPosition / viewModel.effectDuration)
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.blue.opacity(0.2), Color.blue.opacity(0.05)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+            // ScrollView-based zoomed timeline with visible scrollbar
+            GeometryReader { outerGeo in
+                let viewportWidth = outerGeo.size.width
+                let contentWidth = viewportWidth * viewModel.timelineZoomLevel
+                
+                AlwaysScrollableHorizontalView(
+                    contentWidth: contentWidth,
+                    contentHeight: waveformHeight + rulerHeight
+                ) {
+                    VStack(spacing: 0) {
+                        // Time ruler
+                        timelineRuler(contentWidth: contentWidth)
+                            .frame(width: contentWidth, height: rulerHeight)
+                        
+                        // Waveform + overlays — click/drag to scrub
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color(nsColor: .textBackgroundColor))
+                            
+                            timelineWaveformCanvas(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            
+                            if viewModel.effectDuration > 0 && viewModel.fadeIn > 0 {
+                                timelineFadeInOverlay(contentWidth: contentWidth)
+                                    .allowsHitTesting(false)
+                            }
+                            
+                            if viewModel.effectDuration > 0 && viewModel.fadeOut > 0 {
+                                timelineFadeOutOverlay(contentWidth: contentWidth)
+                                    .allowsHitTesting(false)
+                            }
+                            
+                            // Progress fill
+                            if viewModel.effectDuration > 0 {
+                                let progress = CGFloat(viewModel.currentPlaybackPosition / viewModel.effectDuration)
+                                Rectangle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.blue.opacity(0.2), Color.blue.opacity(0.05)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .frame(width: contentWidth * min(max(progress, 0), 1), height: waveformHeight)
+                                    .allowsHitTesting(false)
+                            }
+                            
+                            timelinePlayhead(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            
+                            if viewModel.effectDuration <= 0 {
+                                Text("No audio loaded")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                            
+                            // Scrub/seek overlay
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 1)
+                                        .onChanged { value in
+                                            viewModel.isDraggingTimeline = true
+                                            let fraction = Float(value.location.x / contentWidth)
+                                            let clampedFraction = min(max(fraction, 0), 1)
+                                            viewModel.seekToPosition(clampedFraction * viewModel.effectDuration)
+                                        }
+                                        .onEnded { _ in
+                                            viewModel.isDraggingTimeline = false
+                                        }
                                 )
-                            )
-                            .frame(width: geometry.size.width * min(max(progress, 0), 1))
-                    }
-                    
-                    // Playhead
-                    if viewModel.effectDuration > 0 {
-                        let progress = CGFloat(viewModel.currentPlaybackPosition / viewModel.effectDuration)
-                        let clampedProgress = min(max(progress, 0), 1)
-                        
-                        Rectangle()
-                            .fill(viewModel.isPreviewingEffect ? Color.green : Color.blue)
-                            .frame(width: 2)
-                            .shadow(color: (viewModel.isPreviewingEffect ? Color.green : Color.blue).opacity(0.5), radius: 2)
-                            .offset(x: geometry.size.width * clampedProgress - 1)
-                        
-                        // Playhead handle
-                        Circle()
-                            .fill(viewModel.isPreviewingEffect ? Color.green : Color.blue)
-                            .frame(width: 10, height: 10)
-                            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                            .offset(x: geometry.size.width * clampedProgress - 5,
-                                    y: -timelineHeight / 2 + 2)
-                    }
-                    
-                    // No audio message
-                    if viewModel.effectDuration <= 0 {
-                        Text("No audio loaded")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .onTapGesture { location in
+                                    guard viewModel.effectDuration > 0 else { return }
+                                    let fraction = Float(location.x / contentWidth)
+                                    let clamped = min(max(fraction, 0), 1)
+                                    viewModel.seekToPosition(clamped * viewModel.effectDuration)
+                                }
+                        }
+                        .frame(width: contentWidth, height: waveformHeight)
                     }
                 }
-                .frame(height: timelineHeight)
+                .frame(height: waveformHeight + rulerHeight + (viewModel.timelineZoomLevel > 1 ? 15 : 0))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -1279,22 +1367,8 @@ struct MacAudioTimelineView: View {
                             lineWidth: viewModel.isDraggingTimeline ? 1.5 : 0.5
                         )
                 )
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            viewModel.isDraggingTimeline = true
-                            let fraction = Float(value.location.x / geometry.size.width)
-                            let clampedFraction = min(max(fraction, 0), 1)
-                            let newPosition = clampedFraction * viewModel.effectDuration
-                            viewModel.seekToPosition(newPosition)
-                        }
-                        .onEnded { _ in
-                            viewModel.isDraggingTimeline = false
-                        }
-                )
             }
-            .frame(height: timelineHeight)
+            .frame(height: waveformHeight + rulerHeight + (viewModel.timelineZoomLevel > 1 ? 15 : 0))
             
             // Time markers row
             if viewModel.effectDuration > 0 {
@@ -1303,11 +1377,227 @@ struct MacAudioTimelineView: View {
         }
     }
     
+    // MARK: - Header Row
+    
+    private var timelineHeaderRow: some View {
+        HStack(spacing: 8) {
+            Text("PLAYBACK TIMELINE")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary)
+            
+            if viewModel.effectDuration > 0 {
+                Text(formatTimeValue(viewModel.effectDuration))
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color.secondary.opacity(0.5)))
+            }
+            
+            if viewModel.effectLoop {
+                HStack(spacing: 3) {
+                    Image(systemName: "repeat")
+                        .font(.system(size: 9))
+                    Text("LOOP")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.orange))
+            }
+            
+            Spacer()
+            
+            // Zoom controls
+            if viewModel.effectDuration > 0 {
+                HStack(spacing: 4) {
+                    Button(action: { viewModel.zoomOutTimeline() }) {
+                        Image(systemName: "minus.magnifyingglass")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.timelineZoomLevel <= 1.0)
+                    .help("Zoom Out")
+                    
+                    Text("\(Int(viewModel.timelineZoomLevel * 100))%")
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 38)
+                    
+                    Button(action: { viewModel.zoomInTimeline() }) {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.timelineZoomLevel >= 20.0)
+                    .help("Zoom In")
+                    
+                    Divider().frame(height: 12)
+                    
+                    Button(action: { viewModel.resetTimelineZoom() }) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Fit to Window")
+                    .disabled(viewModel.timelineZoomLevel <= 1.0)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+            }
+            
+            // Transport controls
+            Button(action: { viewModel.goToInPoint() }) {
+                Image(systemName: "backward.end.fill")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.green)
+            .help("Go to In point")
+            .disabled(viewModel.effectDuration <= 0)
+            
+            Button(action: { viewModel.togglePlayFromPosition() }) {
+                Image(systemName: viewModel.isPreviewingEffect ? "pause.fill" : "play.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white)
+                    .frame(width: 28, height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(viewModel.isPreviewingEffect ? Color.red : Color.green)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.effectDuration <= 0)
+            .opacity(viewModel.effectDuration <= 0 ? 0.4 : 1.0)
+            
+            Button(action: { viewModel.goToOutPoint() }) {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.orange)
+            .help("Go to Out point")
+            .disabled(viewModel.effectDuration <= 0)
+            
+            // Time display
+            Text(timeDisplay)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundColor(viewModel.isPreviewingEffect ? .green : .secondary)
+        }
+    }
+    
+    // MARK: - Time Ruler
+    
+    private func timelineRuler(contentWidth: CGFloat) -> some View {
+        Canvas { context, size in
+            let duration = viewModel.effectDuration
+            guard duration > 0 else { return }
+            
+            let pixelsPerSecond = contentWidth / CGFloat(duration)
+            let tickInterval = timelineTickInterval(pixelsPerSecond: pixelsPerSecond)
+            
+            var time: Float = 0
+            while time <= duration {
+                let x = CGFloat(time / duration) * contentWidth
+                
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: x, y: size.height))
+                    p.addLine(to: CGPoint(x: x, y: size.height - 10))
+                }, with: .color(.secondary.opacity(0.6)), lineWidth: 0.5)
+                
+                context.draw(
+                    Text(formatTimeValue(time))
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary),
+                    at: CGPoint(x: x + 2, y: 6), anchor: .leading
+                )
+                
+                if tickInterval > 0 {
+                    for sub in 1..<4 {
+                        let subTime = time + tickInterval * Float(sub) / 4.0
+                        if subTime > duration { break }
+                        let subX = CGFloat(subTime / duration) * contentWidth
+                        context.stroke(Path { p in
+                            p.move(to: CGPoint(x: subX, y: size.height))
+                            p.addLine(to: CGPoint(x: subX, y: size.height - 5))
+                        }, with: .color(.secondary.opacity(0.3)), lineWidth: 0.5)
+                    }
+                }
+                
+                time += tickInterval
+                if tickInterval <= 0 { break }
+            }
+            
+            context.stroke(Path { p in
+                p.move(to: CGPoint(x: 0, y: size.height - 0.5))
+                p.addLine(to: CGPoint(x: contentWidth, y: size.height - 0.5))
+            }, with: .color(.secondary.opacity(0.3)), lineWidth: 0.5)
+        }
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+    }
+    
+    private func timelineTickInterval(pixelsPerSecond: CGFloat) -> Float {
+        for interval in [Float(0.1), 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300] {
+            if pixelsPerSecond * CGFloat(interval) >= 60 { return interval }
+        }
+        return 300
+    }
+    
+    // MARK: - Waveform Canvas
+    
+    private func timelineWaveformCanvas(contentWidth: CGFloat) -> some View {
+        let currentBarCount = barCount
+        let playProgress = viewModel.effectDuration > 0
+            ? viewModel.currentPlaybackPosition / viewModel.effectDuration
+            : Float(0)
+        let fadeInFrac = viewModel.effectDuration > 0 ? viewModel.fadeIn / viewModel.effectDuration : Float(0)
+        let fadeOutStart = viewModel.effectDuration > 0 ? 1.0 - viewModel.fadeOut / viewModel.effectDuration : Float(1)
+        
+        return Canvas { context, size in
+            let barWidth = max(1.0, size.width / CGFloat(currentBarCount) - 0.5)
+            let spacing: CGFloat = 0.5
+            
+            for i in 0..<currentBarCount {
+                let barFrac = Float(i) / Float(currentBarCount)
+                let height = timelineBarHeight(for: i, totalBars: currentBarCount)
+                let isPlayed = barFrac < playProgress
+                let inFade = viewModel.fadeIn > 0 && barFrac < fadeInFrac
+                let outFade = viewModel.fadeOut > 0 && barFrac > fadeOutStart
+                
+                let x = CGFloat(i) * (barWidth + spacing)
+                let barH = size.height * height
+                let y = (size.height - barH) / 2
+                
+                let rect = CGRect(x: x, y: y, width: barWidth, height: barH)
+                let color = timelineBarColor(isPlayed: isPlayed, inFade: inFade, outFade: outFade)
+                context.fill(Path(roundedRect: rect, cornerRadius: 0.5), with: .color(color))
+            }
+        }
+        .frame(width: contentWidth, height: waveformHeight)
+    }
+    
+    private func timelineBarColor(isPlayed: Bool, inFade: Bool, outFade: Bool) -> Color {
+        if isPlayed {
+            if inFade { return Color.green.opacity(0.6) }
+            if outFade { return Color.red.opacity(0.6) }
+            return viewModel.isPreviewingEffect ? Color.green.opacity(0.6) : Color.blue.opacity(0.6)
+        } else {
+            if inFade { return Color.green.opacity(0.2) }
+            if outFade { return Color.red.opacity(0.2) }
+            return Color.gray.opacity(0.3)
+        }
+    }
+    
     // MARK: - Fade Overlays
     
-    private func fadeInOverlay(in geometry: GeometryProxy) -> some View {
+    private func timelineFadeInOverlay(contentWidth: CGFloat) -> some View {
         let fadeFraction = CGFloat(viewModel.fadeIn / viewModel.effectDuration)
-        let fadeWidth = geometry.size.width * min(fadeFraction, 1)
+        let fadeWidth = contentWidth * min(fadeFraction, 1)
         
         return ZStack(alignment: .leading) {
             LinearGradient(
@@ -1315,21 +1605,21 @@ struct MacAudioTimelineView: View {
                 startPoint: .leading,
                 endPoint: .trailing
             )
-            .frame(width: fadeWidth, height: timelineHeight)
+            .frame(width: fadeWidth, height: waveformHeight)
             
             Path { path in
-                path.move(to: CGPoint(x: 0, y: timelineHeight))
-                path.addLine(to: CGPoint(x: fadeWidth, y: timelineHeight * 0.2))
+                path.move(to: CGPoint(x: 0, y: waveformHeight))
+                path.addLine(to: CGPoint(x: fadeWidth, y: waveformHeight * 0.2))
             }
             .stroke(Color.green.opacity(0.6), lineWidth: 1.5)
-            .frame(width: fadeWidth, height: timelineHeight)
+            .frame(width: fadeWidth, height: waveformHeight)
         }
     }
     
-    private func fadeOutOverlay(in geometry: GeometryProxy) -> some View {
+    private func timelineFadeOutOverlay(contentWidth: CGFloat) -> some View {
         let fadeFraction = CGFloat(viewModel.fadeOut / viewModel.effectDuration)
-        let fadeWidth = geometry.size.width * min(fadeFraction, 1)
-        let fadeStartX = geometry.size.width - fadeWidth
+        let fadeWidth = contentWidth * min(fadeFraction, 1)
+        let fadeStartX = contentWidth - fadeWidth
         
         return ZStack(alignment: .trailing) {
             LinearGradient(
@@ -1337,16 +1627,41 @@ struct MacAudioTimelineView: View {
                 startPoint: .leading,
                 endPoint: .trailing
             )
-            .frame(width: fadeWidth, height: timelineHeight)
+            .frame(width: fadeWidth, height: waveformHeight)
             
             Path { path in
-                path.move(to: CGPoint(x: 0, y: timelineHeight * 0.2))
-                path.addLine(to: CGPoint(x: fadeWidth, y: timelineHeight))
+                path.move(to: CGPoint(x: 0, y: waveformHeight * 0.2))
+                path.addLine(to: CGPoint(x: fadeWidth, y: waveformHeight))
             }
             .stroke(Color.red.opacity(0.6), lineWidth: 1.5)
-            .frame(width: fadeWidth, height: timelineHeight)
+            .frame(width: fadeWidth, height: waveformHeight)
         }
         .offset(x: fadeStartX)
+    }
+    
+    // MARK: - Playhead
+    
+    private func timelinePlayhead(contentWidth: CGFloat) -> some View {
+        Group {
+            if viewModel.effectDuration > 0 {
+                let progress = CGFloat(viewModel.currentPlaybackPosition / viewModel.effectDuration)
+                let clampedProgress = min(max(progress, 0), 1)
+                let posX = contentWidth * clampedProgress
+                
+                Rectangle()
+                    .fill(viewModel.isPreviewingEffect ? Color.green : Color.blue)
+                    .frame(width: 2)
+                    .shadow(color: (viewModel.isPreviewingEffect ? Color.green : Color.blue).opacity(0.5), radius: 2)
+                    .offset(x: posX - 1)
+                
+                // Playhead handle at top
+                Circle()
+                    .fill(viewModel.isPreviewingEffect ? Color.green : Color.blue)
+                    .frame(width: 10, height: 10)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                    .offset(x: posX - 5, y: -waveformHeight / 2 + 2)
+            }
+        }
     }
     
     // MARK: - Time Markers
@@ -1390,52 +1705,21 @@ struct MacAudioTimelineView: View {
         .padding(.horizontal, 4)
     }
     
-    // MARK: - Waveform Bars
+    // MARK: - Bar Height
     
-    private func waveformBars(in geometry: GeometryProxy) -> some View {
-        HStack(spacing: 0.5) {
-            ForEach(0..<barCount, id: \.self) { index in
-                let height = waveformBarHeight(for: index, totalBars: barCount)
-                let isPlayed = viewModel.effectDuration > 0 &&
-                    Float(index) / Float(barCount) < (viewModel.currentPlaybackPosition / viewModel.effectDuration)
-                
-                let barFraction = Float(index) / Float(barCount)
-                let inFadeRegion = viewModel.fadeIn > 0 &&
-                    viewModel.effectDuration > 0 &&
-                    barFraction < (viewModel.fadeIn / viewModel.effectDuration)
-                let outFadeRegion = viewModel.fadeOut > 0 &&
-                    viewModel.effectDuration > 0 &&
-                    barFraction > (1.0 - viewModel.fadeOut / viewModel.effectDuration)
-                
-                RoundedRectangle(cornerRadius: 0.5)
-                    .fill(barColor(isPlayed: isPlayed, inFade: inFadeRegion, outFade: outFadeRegion))
-                    .frame(height: timelineHeight * height)
-            }
-        }
-        .frame(height: timelineHeight)
-    }
-    
-    private func barColor(isPlayed: Bool, inFade: Bool, outFade: Bool) -> Color {
-        if isPlayed {
-            if inFade { return Color.green.opacity(0.6) }
-            if outFade { return Color.red.opacity(0.6) }
-            return viewModel.isPreviewingEffect ? Color.green.opacity(0.6) : Color.blue.opacity(0.6)
-        } else {
-            if inFade { return Color.green.opacity(0.2) }
-            if outFade { return Color.red.opacity(0.2) }
-            return Color.gray.opacity(0.3)
-        }
-    }
-    
-    private func waveformBarHeight(for index: Int, totalBars: Int) -> CGFloat {
-        if !viewModel.waveformData.isEmpty {
-            let dataIndex = index * viewModel.waveformData.count / totalBars
-            let clampedIndex = min(dataIndex, viewModel.waveformData.count - 1)
-            let peak = CGFloat(viewModel.waveformData[clampedIndex])
+    private func timelineBarHeight(for index: Int, totalBars: Int) -> CGFloat {
+        // Use hi-res data when zoomed
+        let data = viewModel.timelineZoomLevel > 1.5 && !viewModel.hiResWaveformData.isEmpty
+            ? viewModel.hiResWaveformData : viewModel.waveformData
+        
+        if !data.isEmpty {
+            let dataIndex = index * data.count / totalBars
+            let clampedIndex = min(dataIndex, data.count - 1)
+            let peak = CGFloat(data[clampedIndex])
             return max(0.05, min(0.95, 0.05 + peak * 0.90))
         }
         
-        // Fallback: simulated waveform
+        // Fallback
         let n = Double(index) / Double(totalBars)
         let wave1 = sin(n * .pi * 6.0) * 0.3
         let wave2 = sin(n * .pi * 13.0) * 0.15
@@ -1462,7 +1746,7 @@ struct MacAudioTimelineView: View {
     }
 }
 
-// MARK: - Transport Section (In/Out, Fades, Loop)
+// MARK: - Transport Section (Fades & Timing)
 
 struct MacTransportSection: View {
     @ObservedObject var viewModel: MacDesignViewModel
@@ -1481,6 +1765,7 @@ struct MacTransportSection: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 70)
                             .onSubmit { viewModel.saveEffectProperties() }
+                            .onChange(of: viewModel.fadeIn) { _, _ in viewModel.saveEffectProperties() }
                         Text("s")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -1495,6 +1780,7 @@ struct MacTransportSection: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 70)
                             .onSubmit { viewModel.saveEffectProperties() }
+                            .onChange(of: viewModel.fadeOut) { _, _ in viewModel.saveEffectProperties() }
                         Text("s")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -1514,6 +1800,7 @@ struct MacTransportSection: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 70)
                             .onSubmit { viewModel.saveEffectProperties() }
+                            .onChange(of: viewModel.effectDelay) { _, _ in viewModel.saveEffectProperties() }
                         Text("s")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -1648,6 +1935,7 @@ struct MacCommonControlsSection: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 70)
                             .onSubmit { viewModel.saveEffectProperties() }
+                            .onChange(of: viewModel.effectDelay) { _, _ in viewModel.saveEffectProperties() }
                         Text("s")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -1722,6 +2010,19 @@ class MacDesignViewModel: ObservableObject {
     @Published var fullWaveformData: [Float] = []  // Full file waveform for trim view
     @Published var isPreviewingEffect = false
     @Published var isPreviewingCue = false
+    
+    // Zoom & pan state for full-file waveform trim view
+    @Published var trimZoomLevel: CGFloat = 1.0       // 1.0 = fit-to-width, higher = zoomed in
+    @Published var trimScrollOffset: CGFloat = 0       // Scroll offset in pixels
+    @Published var trimScrollTargetFraction: CGFloat? = nil  // Set by zoomToTrimRegion, consumed by view
+    
+    // Zoom & pan state for playback timeline
+    @Published var timelineZoomLevel: CGFloat = 1.0
+    @Published var timelineScrollOffset: CGFloat = 0
+    
+    // Higher-res waveform data for zoomed views
+    @Published var hiResFullWaveformData: [Float] = []
+    @Published var hiResWaveformData: [Float] = []
     
     // Output meters
     @Published var meterLeftDB: Float = -100
@@ -1970,13 +2271,10 @@ class MacDesignViewModel: ObservableObject {
         cue.autoFollowEnd = autoFollowEnd
         fx.show.save()
         
-        // Defer published property updates to avoid "Publishing changes from within view updates"
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            let updatedCues = self.cues
-            self.cues = []
-            self.cues = updatedCues
-        }
+        // Force refresh
+        let updatedCues = cues
+        cues = []
+        cues = updatedCues
     }
     
     func toggleMIDILearn() {
@@ -2013,15 +2311,21 @@ class MacDesignViewModel: ObservableObject {
         
         // Load audio properties
         if effect.type == fx.TYPE_AUDIO || effect.type == fx.TYPE_MUSIC {
-            let duration = effect.getDuration()
-            if duration > 0 {
-                effectDuration = duration
-            }
             // Get full file duration for trim view
             loadFileDuration(for: effect)
             // Fallback: ensure fileDuration is at least as large as outPoint
             if fileDuration <= 0 && effect.outPoint > 0 {
                 fileDuration = effect.outPoint
+            }
+            // If outPoint is 0 but we have a valid file, default to the track length
+            if effect.outPoint <= 0 && !effect.file.isEmpty && fileDuration > 0 {
+                effect.outPoint = fileDuration
+                outPoint = fileDuration
+                fx.show.save()
+            }
+            let duration = effect.getDuration()
+            if duration > 0 {
+                effectDuration = duration
             }
             if !effect.isPlaying() {
                 currentPlaybackPosition = 0
@@ -2112,6 +2416,15 @@ class MacDesignViewModel: ObservableObject {
                         fx.audio.stop(stream)
                     }
                     
+                    // Fallback: use AVFoundation if BASS didn't return a valid duration
+                    if effect.outPoint <= 0 {
+                        let asset = AVURLAsset(url: URL(fileURLWithPath: destPath))
+                        let duration = Float(CMTimeGetSeconds(asset.duration))
+                        if duration > 0 {
+                            effect.outPoint = duration
+                        }
+                    }
+                    
                     cue.addEffect(effect)
                 }
                 
@@ -2194,19 +2507,16 @@ class MacDesignViewModel: ObservableObject {
             fx.audio.setPan(effect.stream, level: effectPan)
         }
         
+        // Update duration
+        let duration = effect.getDuration()
+        if duration > 0 {
+            effectDuration = duration
+        }
+        
         fx.show.save()
         
-        // Defer published property updates to avoid "Publishing changes from within view updates"
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            // Update duration
-            let duration = effect.getDuration()
-            if duration > 0 {
-                self.effectDuration = duration
-            }
-            // Force refresh effect list
-            self.objectWillChange.send()
-        }
+        // Force refresh effect list
+        objectWillChange.send()
     }
     
     func browseForFile() {
@@ -2244,6 +2554,15 @@ class MacDesignViewModel: ObservableObject {
                     fx.audio.stop(stream)
                 }
                 
+                // Fallback: use AVFoundation if BASS didn't return a valid duration
+                if effect.outPoint <= 0 {
+                    let asset = AVURLAsset(url: URL(fileURLWithPath: destPath))
+                    let duration = Float(CMTimeGetSeconds(asset.duration))
+                    if duration > 0 {
+                        effect.outPoint = duration
+                    }
+                }
+                
                 self.effectFile = fileName
                 self.effectName = effect.name
                 self.outPoint = effect.outPoint
@@ -2265,10 +2584,17 @@ class MacDesignViewModel: ObservableObject {
         guard let effect = currentEffect else { return }
         
         if effect.isPlaying() {
-            effect.previewEnd()
+            effect.stop()
             isPreviewingEffect = false
         } else {
-            effect.previewStart()
+            // Use play(true) to go through execute() which properly applies
+            // fade-in, adds to active effects, and sets up state for fade-out
+            effect.play(true)
+            // If the cursor is positioned beyond the start, seek to that position
+            if currentPlaybackPosition > 0 {
+                let absolutePosition = effect.inPoint + currentPlaybackPosition
+                fx.audio.setPos(effect.stream, position: absolutePosition)
+            }
             isPreviewingEffect = true
         }
     }
@@ -2290,15 +2616,28 @@ class MacDesignViewModel: ObservableObject {
         guard let effect = currentEffect else { return }
         
         if effect.isPlaying() {
-            effect.previewEnd()
+            effect.stop()
             isPreviewingEffect = false
         } else {
-            effect.stream = fx.audio.loadPreview(documentsPath(effect.file))
-            fx.audio.play(effect.stream)
-            let absolutePosition = effect.inPoint + currentPlaybackPosition
-            fx.audio.setPos(effect.stream, position: absolutePosition)
+            // Load via the same output routing (through the mixer)
+            effect.stream = fx.loadOnOutput(documentsPath(effect.file), route: effect.outputRoute, output: effect.output)
             fx.audio.setLevel(effect.stream, level: effect.level)
             fx.audio.setPan(effect.stream, level: effect.pan)
+            fx.addEq(effect.stream, eqArray: effect.eq)
+            fx.addDsp(effect.stream, dsp: effect.dsp)
+            
+            // Set up effect state so process() can handle out-point and fade-out
+            effect.fadeIn = false
+            effect.fading = false
+            effect.startTime = CACurrentMediaTime()
+            effect.delayPending = false
+            effect.currentVolume = effect.level
+            fx.addActive(effect)
+            
+            fx.audio.play(effect.stream)
+            // Seek to the current playback position (relative to inPoint)
+            let absolutePosition = effect.inPoint + currentPlaybackPosition
+            fx.audio.setPos(effect.stream, position: absolutePosition)
             isPreviewingEffect = true
         }
     }
@@ -2318,17 +2657,21 @@ class MacDesignViewModel: ObservableObject {
     private func loadWaveformData(for effect: FxEffect) {
         guard !effect.file.isEmpty else {
             waveformData = []
+            hiResWaveformData = []
             return
         }
         let filePath = documentsPath(effect.file)
         let segmentCount = 200
+        let hiResCount = 800
         let fromTime = effect.inPoint
         let toTime = effect.outPoint > effect.inPoint ? effect.outPoint : effect.inPoint + 1
         
         DispatchQueue.global(qos: .userInitiated).async {
             let data = fx.getWaveformData(filePath: filePath, segments: segmentCount, fromTime: fromTime, toTime: toTime)
+            let hiRes = fx.getWaveformData(filePath: filePath, segments: hiResCount, fromTime: fromTime, toTime: toTime)
             DispatchQueue.main.async { [weak self] in
                 self?.waveformData = data
+                self?.hiResWaveformData = hiRes
             }
         }
     }
@@ -2337,15 +2680,19 @@ class MacDesignViewModel: ObservableObject {
     private func loadFullWaveformData(for effect: FxEffect) {
         guard !effect.file.isEmpty else {
             fullWaveformData = []
+            hiResFullWaveformData = []
             return
         }
         let filePath = documentsPath(effect.file)
         let segmentCount = 200
+        let hiResCount = 800  // Higher resolution for zoomed view
         
         DispatchQueue.global(qos: .userInitiated).async {
             let data = fx.getWaveformData(filePath: filePath, segments: segmentCount)
+            let hiRes = fx.getWaveformData(filePath: filePath, segments: hiResCount)
             DispatchQueue.main.async { [weak self] in
                 self?.fullWaveformData = data
+                self?.hiResFullWaveformData = hiRes
             }
         }
     }
@@ -2446,6 +2793,55 @@ class MacDesignViewModel: ObservableObject {
         objectWillChange.send()
     }
     
+    // MARK: - Zoom Controls
+    
+    /// Zoom in on the trim waveform (full file view)
+    func zoomInTrimView() {
+        trimZoomLevel = min(trimZoomLevel * 1.5, 20.0)
+    }
+    
+    /// Zoom out on the trim waveform
+    func zoomOutTrimView() {
+        trimZoomLevel = max(trimZoomLevel / 1.5, 1.0)
+        if trimZoomLevel <= 1.0 { trimScrollOffset = 0 }
+    }
+    
+    /// Reset trim view zoom to fit
+    func resetTrimZoom() {
+        trimZoomLevel = 1.0
+        trimScrollOffset = 0
+    }
+    
+    /// Zoom in on the playback timeline
+    func zoomInTimeline() {
+        timelineZoomLevel = min(timelineZoomLevel * 1.5, 20.0)
+    }
+    
+    /// Zoom out on the playback timeline
+    func zoomOutTimeline() {
+        timelineZoomLevel = max(timelineZoomLevel / 1.5, 1.0)
+        if timelineZoomLevel <= 1.0 { timelineScrollOffset = 0 }
+    }
+    
+    /// Reset timeline zoom to fit
+    func resetTimelineZoom() {
+        timelineZoomLevel = 1.0
+        timelineScrollOffset = 0
+    }
+    
+    /// Zoom trim view to fit the trimmed region (in point to out point)
+    func zoomToTrimRegion() {
+        guard fileDuration > 0 else { return }
+        let trimFraction = CGFloat((outPoint - inPoint) / fileDuration)
+        guard trimFraction > 0 else { return }
+        // Zoom so trim fills ~80% of viewport
+        trimZoomLevel = min(0.8 / trimFraction, 20.0)
+        // Set scroll target as fraction of file — view will convert to pixels
+        let inFraction = CGFloat(inPoint / fileDuration)
+        let margin: CGFloat = 0.02
+        trimScrollTargetFraction = max(0, inFraction - margin)
+    }
+    
     /// Preview a short snippet around the in point
     func sampleInPoint() {
         guard let effect = currentEffect, !effect.file.isEmpty else { return }
@@ -2535,6 +2931,13 @@ class MacDesignViewModel: ObservableObject {
         currentPlaybackPosition = 0
         waveformData = []
         fullWaveformData = []
+        hiResFullWaveformData = []
+        hiResWaveformData = []
         isPreviewingEffect = false
+        trimZoomLevel = 1.0
+        trimScrollOffset = 0
+        trimScrollTargetFraction = nil
+        timelineZoomLevel = 1.0
+        timelineScrollOffset = 0
     }
 }
