@@ -359,6 +359,23 @@ class MacOutputManager: ObservableObject {
         }
     }
     
+    /// Load an audio file onto multiple additional output buses.
+    /// Returns an array of stream handles, one per additional output index.
+    /// Streams are returned in the same order as `additionalOutputs`.
+    nonisolated func loadOnMultipleOutputs(_ filePath: String, additionalOutputs: Set<Int>) -> [Int32] {
+        var streams: [Int32] = []
+        for outputIndex in additionalOutputs.sorted() {
+            let stream = loadOnOutput(filePath, outputIndex: outputIndex)
+            if stream != 0 {
+                streams.append(stream)
+                print("🔊 MacOutputManager.loadOnMultipleOutputs: loaded on output \(outputIndex) -> stream \(stream)")
+            } else {
+                print("🔊 ⚠️ MacOutputManager.loadOnMultipleOutputs: failed to load on output \(outputIndex)")
+            }
+        }
+        return streams
+    }
+    
     // MARK: - Test
     
     /// Play a test tone on a specific bus

@@ -483,8 +483,9 @@ struct MacEffectRow: View {
                             .foregroundColor(.orange)
                     }
                     
-                    if effect.output > 0 {
-                        Text(OutputBus.labelFor(effect.output))
+                    if effect.output > 0 || !effect.additionalOutputs.isEmpty {
+                        let allOutputLabels = effect.allOutputs.sorted().map { OutputBus.labelFor($0) }.joined()
+                        Text(allOutputLabels)
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
@@ -1891,7 +1892,7 @@ struct MacCommonControlsSection: View {
     var body: some View {
         GroupBox("Options") {
             VStack(spacing: 8) {
-                // Output selector
+                // Output selector (multi-select: effect can play on multiple outputs)
                 HStack {
                     Text("Output:")
                         .font(.caption)
@@ -1900,25 +1901,25 @@ struct MacCommonControlsSection: View {
                     
                     let busCount = MacOutputManager.shared.buses.count
                     
-                    if busCount <= 8 {
-                        // Segmented style for small number of buses
-                        Picker("", selection: $viewModel.effectOutput) {
-                            ForEach(0..<busCount, id: \.self) { i in
-                                Text(OutputBus.labelFor(i)).tag(i)
+                    HStack(spacing: 2) {
+                        ForEach(0..<busCount, id: \.self) { i in
+                            let isSelected = viewModel.effectSelectedOutputs.contains(i)
+                            Button {
+                                viewModel.toggleOutput(i)
+                            } label: {
+                                Text(OutputBus.labelFor(i))
+                                    .font(.caption)
+                                    .frame(width: 28, height: 22)
+                                    .background(isSelected ? Color.accentColor : Color.clear)
+                                    .foregroundColor(isSelected ? .white : .primary)
+                                    .cornerRadius(4)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                    )
                             }
+                            .buttonStyle(.plain)
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: CGFloat(busCount) * 40)
-                        .onChange(of: viewModel.effectOutput) { _, _ in viewModel.saveEffectProperties() }
-                    } else {
-                        // Dropdown for many buses
-                        Picker("", selection: $viewModel.effectOutput) {
-                            ForEach(0..<busCount, id: \.self) { i in
-                                Text("Output \(OutputBus.labelFor(i))").tag(i)
-                            }
-                        }
-                        .frame(width: 140)
-                        .onChange(of: viewModel.effectOutput) { _, _ in viewModel.saveEffectProperties() }
                     }
                     
                     Spacer()
@@ -1999,6 +2000,7 @@ class MacDesignViewModel: ObservableObject {
     @Published var effectBackground = false
     @Published var isSpotEffect = false
     @Published var effectOutput: Int = 0
+    @Published var effectSelectedOutputs: Set<Int> = [0]  // All selected output bus indices (multi-output)
     @Published var effectDontFade = false
     
     // Timeline/playback state
@@ -2303,6 +2305,8 @@ class MacDesignViewModel: ObservableObject {
         effectBackground = effect.background
         isSpotEffect = effect.spotEffect
         effectOutput = effect.output
+        // Populate multi-output selection: primary + any additional outputs
+        effectSelectedOutputs = Set([effect.output]).union(effect.additionalOutputs)
         effectDontFade = effect.dontFade
         
         // Sync engine
@@ -2480,6 +2484,23 @@ class MacDesignViewModel: ObservableObject {
         selectCue(at: cueIndex)
     }
     
+    /// Toggle an output bus on/off for the current effect. At least one must remain selected.
+    func toggleOutput(_ index: Int) {
+        if effectSelectedOutputs.contains(index) {
+            // Don't allow deselecting the last one
+            if effectSelectedOutputs.count > 1 {
+                effectSelectedOutputs.remove(index)
+            }
+        } else {
+            effectSelectedOutputs.insert(index)
+        }
+        // Update primary output to the lowest selected index
+        if let primary = effectSelectedOutputs.sorted().first {
+            effectOutput = primary
+        }
+        saveEffectProperties()
+    }
+    
     func saveEffectProperties() {
         guard let cueIndex = selectedCueIndex, cueIndex < cues.count,
               let effectIndex = selectedEffectIndex else { return }
@@ -2499,12 +2520,27 @@ class MacDesignViewModel: ObservableObject {
         effect.background = effectBackground
         effect.spotEffect = isSpotEffect
         effect.output = effectOutput
+        // Sync multi-output: primary output is the lowest selected, rest are additional
+        let sorted = effectSelectedOutputs.sorted()
+        if let primary = sorted.first {
+            effect.output = primary
+            effectOutput = primary
+            effect.additionalOutputs = Set(sorted.dropFirst())
+        } else {
+            effect.output = 0
+            effectOutput = 0
+            effect.additionalOutputs = []
+        }
         effect.dontFade = effectDontFade
         
         // Live update if playing
         if effect.isPlaying() {
             fx.audio.setLevel(effect.stream, level: effectLevel)
             fx.audio.setPan(effect.stream, level: effectPan)
+            for s in effect.additionalStreams {
+                fx.audio.setLevel(s, level: effectLevel)
+                fx.audio.setPan(s, level: effectPan)
+            }
         }
         
         // Update duration
@@ -2594,6 +2630,7 @@ class MacDesignViewModel: ObservableObject {
             if currentPlaybackPosition > 0 {
                 let absolutePosition = effect.inPoint + currentPlaybackPosition
                 fx.audio.setPos(effect.stream, position: absolutePosition)
+                for s in effect.additionalStreams { fx.audio.setPos(s, position: absolutePosition) }
             }
             isPreviewingEffect = true
         }
@@ -2626,6 +2663,15 @@ class MacDesignViewModel: ObservableObject {
             fx.addEq(effect.stream, eqArray: effect.eq)
             fx.addDsp(effect.stream, dsp: effect.dsp)
             
+            // Also load additional output streams
+            effect.loadAdditionalStreams(filePath: documentsPath(effect.file))
+            for s in effect.additionalStreams {
+                fx.audio.setLevel(s, level: effect.level)
+                fx.audio.setPan(s, level: effect.pan)
+                fx.addEq(s, eqArray: effect.eq)
+                fx.addDsp(s, dsp: effect.dsp)
+            }
+            
             // Set up effect state so process() can handle out-point and fade-out
             effect.fadeIn = false
             effect.fading = false
@@ -2635,9 +2681,11 @@ class MacDesignViewModel: ObservableObject {
             fx.addActive(effect)
             
             fx.audio.play(effect.stream)
+            for s in effect.additionalStreams { fx.audio.play(s) }
             // Seek to the current playback position (relative to inPoint)
             let absolutePosition = effect.inPoint + currentPlaybackPosition
             fx.audio.setPos(effect.stream, position: absolutePosition)
+            for s in effect.additionalStreams { fx.audio.setPos(s, position: absolutePosition) }
             isPreviewingEffect = true
         }
     }
@@ -2649,6 +2697,7 @@ class MacDesignViewModel: ObservableObject {
         if effect.isPlaying() {
             let absolutePosition = effect.inPoint + position
             fx.audio.setPos(effect.stream, position: absolutePosition)
+            for s in effect.additionalStreams { fx.audio.setPos(s, position: absolutePosition) }
         }
     }
     
@@ -2925,6 +2974,7 @@ class MacDesignViewModel: ObservableObject {
         effectBackground = false
         isSpotEffect = false
         effectOutput = 0
+        effectSelectedOutputs = [0]
         effectDontFade = false
         effectDuration = 0
         fileDuration = 0
