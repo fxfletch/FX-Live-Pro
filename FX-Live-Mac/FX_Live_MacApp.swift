@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import AppKit
 
 @main
 struct FX_Live_MacApp: App {
+    /// Delegate to handle app lifecycle events (termination cleanup)
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
         // Apply saved audio settings at launch
@@ -112,5 +115,20 @@ struct FX_Live_MacApp: App {
         Settings {
             MacSettingsView()
         }
+    }
+}
+
+// MARK: - App Delegate for Cleanup
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        print("🔊 App terminating — stopping all audio streams")
+        // Stop all active effects and their additional streams
+        for eff in fx.activeEffects {
+            fx.audio.stop(eff.stream)
+            eff.stopAdditionalStreams()
+        }
+        // Tear down all output bus mixers (frees BASS devices)
+        MacOutputManager.shared.teardownAll()
     }
 }

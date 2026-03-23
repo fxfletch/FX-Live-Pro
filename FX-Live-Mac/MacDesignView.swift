@@ -1833,10 +1833,15 @@ struct MacTransportSection: View {
 struct MacAudioControlsSection: View {
     @ObservedObject var viewModel: MacDesignViewModel
     
+    /// Whether multi-output is active for this effect
+    private var hasMultipleOutputs: Bool {
+        MacOutputManager.shared.multiOutputEnabled && viewModel.effectSelectedOutputs.count > 1
+    }
+    
     var body: some View {
         GroupBox("Level & Pan") {
             VStack(spacing: 10) {
-                // Level
+                // Master Level
                 HStack {
                     Text("Level:")
                         .font(.caption)
@@ -1848,6 +1853,39 @@ struct MacAudioControlsSection: View {
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundColor(viewModel.effectLevel > 1.0 ? .orange : .primary)
                         .frame(width: 60)
+                }
+                
+                // Per-output volume sliders (shown when multiple outputs selected)
+                if hasMultipleOutputs {
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text("Output Trims")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button("Reset All") {
+                                viewModel.effectOutputVolumes.removeAll()
+                                viewModel.saveEffectProperties()
+                            }
+                            .font(.system(size: 10))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.blue)
+                        }
+                        
+                        ForEach(viewModel.effectSelectedOutputs.sorted(), id: \.self) { busIndex in
+                            MacDesignOutputVolumeSlider(
+                                viewModel: viewModel,
+                                busIndex: busIndex,
+                                isPrimary: busIndex == viewModel.effectOutput
+                            )
+                        }
+                    }
+                    .padding(.top, 4)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                    )
                 }
                 
                 // Pan
@@ -1880,6 +1918,64 @@ struct MacAudioControlsSection: View {
         if viewModel.effectPan == 0 { return "Center" }
         if viewModel.effectPan < 0 { return "L\(Int(abs(viewModel.effectPan) * 100))%" }
         return "R\(Int(viewModel.effectPan * 100))%"
+    }
+}
+
+// MARK: - Design View Per-Output Volume Slider
+
+/// Per-output trim slider for the Design View effect editor.
+/// Controls the trim multiplier (0…2). Effective volume = master level × trim.
+struct MacDesignOutputVolumeSlider: View {
+    @ObservedObject var viewModel: MacDesignViewModel
+    let busIndex: Int
+    let isPrimary: Bool
+    
+    private var trimValue: Float {
+        viewModel.effectOutputVolumes[busIndex] ?? 1.0
+    }
+    
+    private var effectiveLevel: Float {
+        viewModel.effectLevel * trimValue
+    }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            // Bus label
+            Text(OutputBus.labelFor(busIndex))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 20, alignment: .center)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(isPrimary ? Color.blue.opacity(0.3) : Color.gray.opacity(0.3))
+                )
+            
+            Slider(value: Binding(
+                get: {
+                    Double(trimValue)
+                },
+                set: { newValue in
+                    viewModel.effectOutputVolumes[busIndex] = Float(newValue)
+                    viewModel.saveEffectProperties()
+                }
+            ), in: 0...2)
+            .tint(trimValue > 1.0 ? .orange : .green)
+            
+            // dB readout of effective volume
+            Text(levelDBString(effectiveLevel))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 52, alignment: .trailing)
+        }
+    }
+    
+    private func levelDBString(_ level: Float) -> String {
+        if level <= 0 { return "-∞ dB" }
+        let dB = 20.0 * log10(level)
+        if abs(dB) < 0.05 { return "0.0 dB" }
+        return String(format: "%+.1f dB", dB)
     }
 }
 
@@ -2001,6 +2097,7 @@ class MacDesignViewModel: ObservableObject {
     @Published var isSpotEffect = false
     @Published var effectOutput: Int = 0
     @Published var effectSelectedOutputs: Set<Int> = [0]  // All selected output bus indices (multi-output)
+    @Published var effectOutputVolumes: [Int: Float] = [:]  // Per-output volume overrides (bus index → level)
     @Published var effectDontFade = false
     
     // Timeline/playback state
@@ -2307,6 +2404,7 @@ class MacDesignViewModel: ObservableObject {
         effectOutput = effect.output
         // Populate multi-output selection: primary + any additional outputs
         effectSelectedOutputs = Set([effect.output]).union(effect.additionalOutputs)
+        effectOutputVolumes = effect.outputVolumes
         effectDontFade = effect.dontFade
         
         // Sync engine
@@ -2531,14 +2629,29 @@ class MacDesignViewModel: ObservableObject {
             effectOutput = 0
             effect.additionalOutputs = []
         }
+        // Save per-output volume overrides (only for selected outputs)
+        effect.outputVolumes = effectOutputVolumes.filter { effectSelectedOutputs.contains($0.key) }
         effect.dontFade = effectDontFade
         
         // Live update if playing
         if effect.isPlaying() {
-            fx.audio.setLevel(effect.stream, level: effectLevel)
+            // Apply effective volume (level × trim) to primary stream
+            let primaryTrim = effect.trimForOutput(effect.output)
+            let primaryVol = effectLevel * primaryTrim
+            fx.audio.setLevel(effect.stream, level: primaryVol)
+            if !settings.logLevels {
+                fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
+            }
             fx.audio.setPan(effect.stream, level: effectPan)
-            for s in effect.additionalStreams {
-                fx.audio.setLevel(s, level: effectLevel)
+            // Apply effective volume (level × trim) to additional streams
+            let sortedAdditional = effect.sortedAdditionalOutputs
+            for (i, s) in effect.additionalStreams.enumerated() {
+                let trim: Float = (i < sortedAdditional.count) ? effect.trimForOutput(sortedAdditional[i]) : 1.0
+                let vol = effectLevel * trim
+                fx.audio.setLevel(s, level: vol)
+                if !settings.logLevels {
+                    fx.audio.fade(to: s, fadeTime: 0, level: vol)
+                }
                 fx.audio.setPan(s, level: effectPan)
             }
         }
@@ -2975,6 +3088,7 @@ class MacDesignViewModel: ObservableObject {
         isSpotEffect = false
         effectOutput = 0
         effectSelectedOutputs = [0]
+        effectOutputVolumes = [:]
         effectDontFade = false
         effectDuration = 0
         fileDuration = 0

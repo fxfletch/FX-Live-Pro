@@ -352,6 +352,16 @@ struct MacActiveEffectRow: View {
     let tick: UInt  // Forces re-render when view model ticks
     let onStop: () -> Void
     
+    /// Whether this effect plays on multiple outputs
+    private var hasMultipleOutputs: Bool {
+        MacOutputManager.shared.multiOutputEnabled && !effect.additionalOutputs.isEmpty
+    }
+    
+    /// All output bus indices in sorted order (primary + additional)
+    private var allOutputsSorted: [Int] {
+        Array(effect.allOutputs).sorted()
+    }
+    
     var body: some View {
         VStack(spacing: 6) {
             HStack {
@@ -359,9 +369,19 @@ struct MacActiveEffectRow: View {
                     Text(effect.name)
                         .font(.body)
                         .fontWeight(.medium)
-                    Text(effect.status)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Text(effect.status)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        if hasMultipleOutputs {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(allOutputsSorted.map { OutputBus.labelFor($0) }.joined(separator: "+"))
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundColor(.blue.opacity(0.8))
+                        }
+                    }
                 }
                 
                 Spacer()
@@ -392,30 +412,85 @@ struct MacActiveEffectRow: View {
                     .tint(.blue)
             }
             
-            // Volume slider
-            HStack(spacing: 8) {
-                Image(systemName: "speaker.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Slider(value: Binding(
-                    get: {
-                        if effect.stream >= 0 {
-                            return Double(fx.audio.getLevel(effect.stream))
+            if hasMultipleOutputs {
+                // Multi-output: master fader + individual per-output trim sliders
+                
+                // Master fader (scales all outputs together)
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("All")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Slider(value: Binding(
+                        get: {
+                            return Double(effect.currentVolume)
+                        },
+                        set: { newValue in
+                            let floatVal = Float(newValue)
+                            effect.currentVolume = floatVal
+                            effect.level = floatVal
+                            // Reapply effective volume (level × trim) to all streams
+                            let primaryVol = floatVal * effect.trimForOutput(effect.output)
+                            fx.audio.setLevel(effect.stream, level: primaryVol)
+                            if !settings.logLevels {
+                                fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
+                            }
+                            let sorted = effect.sortedAdditionalOutputs
+                            for (i, s) in effect.additionalStreams.enumerated() {
+                                let trim: Float = (i < sorted.count) ? effect.trimForOutput(sorted[i]) : 1.0
+                                let vol = floatVal * trim
+                                fx.audio.setLevel(s, level: vol)
+                                if !settings.logLevels {
+                                    fx.audio.fade(to: s, fadeTime: 0, level: vol)
+                                }
+                            }
                         }
-                        return Double(effect.currentVolume)
-                    },
-                    set: { newValue in
-                        effect.currentVolume = Float(newValue)
-                        fx.audio.setLevel(effect.stream, level: Float(newValue))
-                        if !settings.performanceMode {
-                            effect.level = Float(newValue)
-                        }
+                    ), in: 0...2)
+                    .tint(effect.currentVolume > 1.0 ? .orange : .blue)
+                    Image(systemName: "speaker.wave.3.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Individual per-output trim sliders
+                VStack(spacing: 4) {
+                    ForEach(allOutputsSorted, id: \.self) { busIndex in
+                        MacOutputVolumeSlider(
+                            effect: effect,
+                            busIndex: busIndex,
+                            isPrimary: busIndex == effect.output,
+                            tick: tick
+                        )
                     }
-                ), in: 0...2)
-                .tint(effect.currentVolume > 1.0 ? .orange : .blue)
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                }
+            } else {
+                // Single output: show master volume slider
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Slider(value: Binding(
+                        get: {
+                            return Double(effect.currentVolume)
+                        },
+                        set: { newValue in
+                            effect.currentVolume = Float(newValue)
+                            fx.audio.setLevel(effect.stream, level: Float(newValue))
+                            if !settings.logLevels {
+                                fx.audio.fade(to: effect.stream, fadeTime: 0, level: Float(newValue))
+                            }
+                            if !settings.performanceMode {
+                                effect.level = Float(newValue)
+                            }
+                        }
+                    ), in: 0...2)
+                    .tint(effect.currentVolume > 1.0 ? .orange : .blue)
+                    Image(systemName: "speaker.wave.3.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(10)
@@ -439,6 +514,89 @@ struct MacActiveEffectRow: View {
             return .red
         }
         return .primary
+    }
+}
+
+// MARK: - Per-Output Volume Slider
+
+/// Individual trim slider for a specific output bus on an active effect.
+/// Controls the per-output trim multiplier (0…2). Effective volume = master level × trim.
+struct MacOutputVolumeSlider: View {
+    let effect: FxEffect
+    let busIndex: Int
+    let isPrimary: Bool
+    let tick: UInt
+    
+    /// Find the stream handle for this bus index
+    private var streamForBus: Int32 {
+        if isPrimary {
+            return effect.stream
+        }
+        let sorted = effect.sortedAdditionalOutputs
+        if let idx = sorted.firstIndex(of: busIndex), idx < effect.additionalStreams.count {
+            return effect.additionalStreams[idx]
+        }
+        return -1
+    }
+    
+    /// The trim value for this output (1.0 = unity)
+    private var trimValue: Float {
+        effect.trimForOutput(busIndex)
+    }
+    
+    /// The effective volume (level × trim) for display
+    private var effectiveLevel: Float {
+        effect.currentVolume * trimValue
+    }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            // Bus label
+            Text(OutputBus.labelFor(busIndex))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 20, alignment: .center)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(isPrimary ? Color.blue.opacity(0.3) : Color.gray.opacity(0.3))
+                )
+            
+            Slider(value: Binding(
+                get: {
+                    Double(trimValue)
+                },
+                set: { newValue in
+                    let newTrim = Float(newValue)
+                    // Store the trim value
+                    effect.setTrimForOutput(busIndex, trim: newTrim)
+                    // Apply effective volume (level × trim) to BASS stream
+                    let effectiveVol = effect.currentVolume * newTrim
+                    let s = streamForBus
+                    if s > 0 {
+                        fx.audio.setLevel(s, level: effectiveVol)
+                        if !settings.logLevels {
+                            fx.audio.fade(to: s, fadeTime: 0, level: effectiveVol)
+                        }
+                    }
+                }
+            ), in: 0...2)
+            .tint(trimValue > 1.0 ? .orange : .green)
+            
+            // dB readout of effective volume
+            Text(levelDBString(effectiveLevel))
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 42, alignment: .trailing)
+        }
+    }
+    
+    private func levelDBString(_ level: Float) -> String {
+        if level <= 0 { return "-∞ dB" }
+        let dB = 20.0 * log10(level)
+        if abs(dB) < 0.05 { return "0.0 dB" }
+        return String(format: "%+.1f dB", dB)
     }
 }
 
