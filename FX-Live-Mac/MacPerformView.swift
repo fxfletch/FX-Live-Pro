@@ -540,8 +540,13 @@ struct MacOutputVolumeSlider: View {
     }
     
     /// The trim value for this output (1.0 = unity)
+    /// During a transition, reads the interpolated value from currentOutputVolumes
+    /// so the slider animates smoothly. Falls back to the target outputVolumes otherwise.
     private var trimValue: Float {
-        effect.trimForOutput(busIndex)
+        if let interp = effect.currentOutputVolumes[busIndex], !effect.currentOutputVolumes.isEmpty {
+            return interp
+        }
+        return effect.trimForOutput(busIndex)
     }
     
     /// The effective volume (level × trim) for display
