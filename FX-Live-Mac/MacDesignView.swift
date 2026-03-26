@@ -113,12 +113,15 @@ struct MacCueListPanel: View {
                         )
                         .contextMenu {
                             Button("Insert Cue Above") { viewModel.insertCue(at: index) }
+                            Button("Insert Cue After") { viewModel.insertCueAfter(at: index) }
+                            Button("Duplicate") { viewModel.duplicateCue(at: index) }
                             Divider()
                             Button("Copy") { viewModel.selectCue(at: index); viewModel.copyCue() }
                             Button("Delete", role: .destructive) { viewModel.deleteCue(at: index) }
                         }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
+                .id(viewModel.cueListRefreshID)
             }
             
             Divider()
@@ -799,6 +802,7 @@ struct MacFullWaveformTrimView: View {
                             }
                         }
                         .frame(width: contentWidth, height: waveformHeight)
+                        .coordinateSpace(name: "trimWaveform")
                     }
                 }
                 .frame(height: waveformHeight + rulerHeight + (viewModel.trimZoomLevel > 1 ? 15 : 0))
@@ -868,10 +872,10 @@ struct MacFullWaveformTrimView: View {
         .contentShape(Rectangle())
         .offset(x: x - handleWidth / 2)
         .gesture(
-            DragGesture(minimumDistance: 1)
+            DragGesture(minimumDistance: 1, coordinateSpace: .named("trimWaveform"))
                 .onChanged { value in
                     draggingHandle = handleType
-                    let newX = x + value.translation.width
+                    let newX = value.startLocation.x + value.translation.width
                     let newFrac = Float(max(0, min(newX / contentWidth, 1)))
                     let timePos = newFrac * viewModel.fileDuration
                     switch handleType {
@@ -1214,14 +1218,25 @@ struct MacTrimControlsSection: View {
                 
                 VStack(spacing: 4) {
                     Text(" ").font(.system(size: 10, weight: .semibold))
-                    Button(action: { viewModel.resetTrimPoints() }) {
-                        VStack(spacing: 2) {
-                            Image(systemName: "arrow.counterclockwise").font(.system(size: 14))
-                            Text("Reset").font(.system(size: 9))
+                    HStack(spacing: 8) {
+                        Button(action: { viewModel.resetTrimPoints() }) {
+                            VStack(spacing: 2) {
+                                Image(systemName: "arrow.counterclockwise").font(.system(size: 14))
+                                Text("Reset").font(.system(size: 9))
+                            }
                         }
+                        .help("Reset to full file").buttonStyle(.bordered)
+                        .disabled(viewModel.fileDuration <= 0)
+                        
+                        Button(action: { viewModel.autoTrimSilence() }) {
+                            VStack(spacing: 2) {
+                                Image(systemName: "waveform.badge.minus").font(.system(size: 14))
+                                Text("Auto Trim").font(.system(size: 9))
+                            }
+                        }
+                        .help("Auto-trim silence from start and end").buttonStyle(.bordered).tint(.blue)
+                        .disabled(viewModel.fileDuration <= 0)
                     }
-                    .help("Reset to full file").buttonStyle(.bordered)
-                    .disabled(viewModel.fileDuration <= 0)
                 }
                 
                 Spacer()
@@ -2072,6 +2087,7 @@ class MacDesignViewModel: ObservableObject {
     @Published var cues: [FxCue] = []
     @Published var selectedCueIndex: Int?
     @Published var selectedEffectIndex: Int?
+    @Published var cueListRefreshID: Int = 0
     
     // Cue properties
     @Published var cueName = ""
@@ -2291,6 +2307,39 @@ class MacDesignViewModel: ObservableObject {
         fx.show.save()
     }
     
+    func insertCueAfter(at index: Int) {
+        let insertIndex = index + 1
+        if insertIndex >= cues.count {
+            // Insert at end
+            addCue()
+        } else {
+            let newCue = fx.show.currentVersion.insertCue(insertIndex)
+            loadShow()
+            if let insertedIndex = cues.firstIndex(where: { $0 === newCue }) {
+                newCue.createName(insertedIndex + 1)
+                selectCue(at: insertedIndex)
+            }
+            fx.show.save()
+        }
+    }
+    
+    func duplicateCue(at index: Int) {
+        guard index >= 0 && index < cues.count else { return }
+        let original = cues[index]
+        let data = NSKeyedArchiver.archivedData(withRootObject: original)
+        guard let copy = NSKeyedUnarchiver.unarchiveObject(with: data) as? FxCue else { return }
+        
+        let insertIndex = index + 1
+        if insertIndex >= cues.count {
+            _ = fx.show.currentVersion.addCue(copy)
+        } else {
+            fx.show.currentVersion.cues.insert(copy, at: insertIndex)
+        }
+        fx.show.save()
+        loadShow()
+        selectCue(at: insertIndex)
+    }
+    
     func deleteCue(at index: Int) {
         guard index >= 0 && index < cues.count else { return }
         fx.show.currentVersion.currentCueNo = index
@@ -2317,15 +2366,13 @@ class MacDesignViewModel: ObservableObject {
     func copyCue() {
         guard let index = selectedCueIndex, index < cues.count else { return }
         let original = cues[index]
-        if let data = try? NSKeyedArchiver.archivedData(withRootObject: original, requiringSecureCoding: false) {
-            copiedCueData = data
-            canPaste = true
-        }
+        copiedCueData = NSKeyedArchiver.archivedData(withRootObject: original)
+        canPaste = true
     }
     
     func pasteCue() {
         guard let data = copiedCueData,
-              let copy = try? NSKeyedUnarchiver.unarchivedObject(ofClass: FxCue.self, from: data) else { return }
+              let copy = NSKeyedUnarchiver.unarchiveObject(with: data) as? FxCue else { return }
         copy.name = "\(copy.getName()) (copy)"
         _ = fx.show.currentVersion.addCue(copy)
         fx.show.save()
@@ -2370,10 +2417,8 @@ class MacDesignViewModel: ObservableObject {
         cue.autoFollowEnd = autoFollowEnd
         fx.show.save()
         
-        // Force refresh
-        let updatedCues = cues
-        cues = []
-        cues = updatedCues
+        // Force cue list refresh
+        cueListRefreshID += 1
     }
     
     func toggleMIDILearn() {
@@ -2474,6 +2519,7 @@ class MacDesignViewModel: ObservableObject {
             }
             
             cue.addEffect(effect)
+            updateCueNameFromFirstEffect(cue, effectName: effect.name)
             fx.show.save()
             loadShow()
             selectCue(at: cueIndex)
@@ -2528,6 +2574,11 @@ class MacDesignViewModel: ObservableObject {
                     }
                     
                     cue.addEffect(effect)
+                }
+                
+                // If this was the first effect added, update the cue name
+                if cue.effects.count > 0 {
+                    self.updateCueNameFromFirstEffect(cue, effectName: cue.effects[0].name)
                 }
                 
                 fx.show.save()
@@ -2897,6 +2948,32 @@ class MacDesignViewModel: ObservableObject {
         objectWillChange.send()
     }
     
+    /// Auto-trim silence from start and end of the clip using the engine's silence detection
+    func autoTrimSilence() {
+        guard let effect = currentEffect, !effect.file.isEmpty, fileDuration > 0 else { return }
+        let filePath = documentsPath(effect.file)
+        
+        var trimIn: Float = 0
+        var trimOut: Float = 0
+        fx.audio.getTrim(filePath, inPoint: &trimIn, outPont: &trimOut)
+        
+        // Only apply if we got valid results
+        if trimIn >= 0 && trimIn < fileDuration {
+            inPoint = trimIn
+            effect.inPoint = trimIn
+        }
+        if trimOut > inPoint && trimOut <= fileDuration {
+            outPoint = trimOut
+            effect.outPoint = trimOut
+        }
+        
+        effectDuration = effect.getDuration()
+        currentPlaybackPosition = 0
+        fx.show.save()
+        loadWaveformData(for: effect)
+        objectWillChange.send()
+    }
+    
     /// Set in point to current playback position
     func setInPointAtPlayhead() {
         guard let effect = currentEffect else { return }
@@ -3072,6 +3149,19 @@ class MacDesignViewModel: ObservableObject {
     }
     
     // MARK: - Helpers
+    
+    /// When adding the first effect to a cue, set the cue name from the effect name
+    /// if the cue still has the default name format (e.g. "Cue:1>")
+    private func updateCueNameFromFirstEffect(_ cue: FxCue, effectName: String) {
+        guard cue.effects.count == 1 else { return }
+        // Default names end with ">" (e.g. "Cue:1>")
+        if cue.name.hasSuffix(">") && !effectName.isEmpty {
+            let prefix = cue.name.components(separatedBy: ">").first ?? ""
+            cue.name = "\(prefix)> \(effectName)"
+            cueName = cue.name
+            cueListRefreshID += 1
+        }
+    }
     
     private func resetEffectState() {
         effectName = ""
