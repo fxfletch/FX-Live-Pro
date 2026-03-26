@@ -1,0 +1,50 @@
+# Xcode
+xcuserdata/
+build/
+DerivedData/
+
+## Object files
+*.o
+*.d
+
+## Precompiled headers
+*.pch
+
+## Compiled dynamic libraries
+*.dylib
+
+## Compilation databases
+compile_commands.json
+
+## Xcode workspaces - keep shared data, ignore user data
+*.xcworkspace/xcuserdata/
+
+## Finder
+.DS_Store
+
+## Backup files
+*.backup
+*~
+*.orig
+
+## Swift Package Manager
+.build/
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+## Provisioning profiles
+*.mobileprovision
+
+## Crash logs
+*.ips
+*.crash
+
+## Large media files
+*.m4v
+*.mov
+*.mp4
+
+## macOS
+.Spotlight-V100
+.Trashes
+._*
