@@ -101,7 +101,7 @@ struct MacCueListPanel: View {
                 .frame(maxWidth: .infinity)
             } else {
                 List(Array(viewModel.cues.enumerated()), id: \.offset) { index, cue in
-                    MacCueRow(cue: cue, index: index, isSelected: viewModel.selectedCueIndex == index)
+                    MacCueRow(cue: cue, index: index, isSelected: viewModel.selectedCueIndex == index, refreshID: viewModel.cueListRefreshID)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.selectCue(at: index)
@@ -121,7 +121,6 @@ struct MacCueListPanel: View {
                         }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
-                .id(viewModel.cueListRefreshID)
             }
             
             Divider()
@@ -164,6 +163,7 @@ struct MacCueRow: View {
     let cue: FxCue
     let index: Int
     let isSelected: Bool
+    let refreshID: Int  // Forces row redraw when cue properties change
     
     var body: some View {
         HStack(spacing: 8) {
@@ -2283,6 +2283,11 @@ class MacDesignViewModel: ObservableObject {
         // Sync with engine
         fx.show.currentVersion.currentCueNo = index
         fx.show.currentVersion.currentCue = cue
+        
+        // Auto-select the first effect if the cue has any
+        if !cue.effects.isEmpty {
+            selectEffect(at: 0)
+        }
     }
     
     func addCue() {
@@ -3151,12 +3156,13 @@ class MacDesignViewModel: ObservableObject {
     // MARK: - Helpers
     
     /// When adding the first effect to a cue, set the cue name from the effect name
-    /// if the cue still has the default name format (e.g. "Cue:1>")
+    /// if the cue still has the default name format (e.g. "Cue:1>" or "Cue:1> Silence")
     private func updateCueNameFromFirstEffect(_ cue: FxCue, effectName: String) {
-        guard cue.effects.count == 1 else { return }
-        // Default names end with ">" (e.g. "Cue:1>")
-        if cue.name.hasSuffix(">") && !effectName.isEmpty {
-            let prefix = cue.name.components(separatedBy: ">").first ?? ""
+        guard cue.effects.count == 1, !effectName.isEmpty else { return }
+        // Default names end with ">" or "> Silence"
+        let name = cue.name.trimmingCharacters(in: .whitespaces)
+        if name.hasSuffix(">") || name.hasSuffix("> Silence") {
+            let prefix = name.components(separatedBy: ">").first ?? ""
             cue.name = "\(prefix)> \(effectName)"
             cueName = cue.name
             cueListRefreshID += 1
