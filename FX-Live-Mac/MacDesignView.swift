@@ -2224,11 +2224,17 @@ class MacDesignViewModel: ObservableObject {
         // Check cue playing state
         if let cueIndex = selectedCueIndex, cueIndex < cues.count {
             let cue = cues[cueIndex]
-            isPreviewingCue = cue.isPlaying()
             
-            // Process effects (fades, loops, out-points)
+            // A cue is active if any effect is playing OR waiting on a delay
+            let cueActive = cue.effects.contains { $0.isPlaying() || $0.delayPending }
+            if isPreviewingCue && !cueActive {
+                isPreviewingCue = false
+            }
+            
+            // Process effects — includes delay-pending effects so their
+            // delay timer can fire execute() and start playback
             for eff in cue.effects {
-                if eff.isPlaying() {
+                if eff.isPlaying() || eff.delayPending {
                     eff.process()
                 }
             }
@@ -2692,13 +2698,13 @@ class MacDesignViewModel: ObservableObject {
         // Live update if playing
         if effect.isPlaying() {
             // Apply effective volume (level × trim) to primary stream
+            // Use setLevel only — it applies ToLevel() perceptual curve, matching
+            // how processAnimation applies levels during transitions
             let primaryTrim = effect.trimForOutput(effect.output)
             let primaryVol = effectLevel * primaryTrim
             fx.audio.setLevel(effect.stream, level: primaryVol)
-            if settings.logLevels {
-                fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
-            }
             fx.audio.setPan(effect.stream, level: effectPan)
+            effect.currentVolume = effectLevel
             // Apply effective volume (level × trim) to additional streams
             let sortedAdditional = effect.sortedAdditionalOutputs
             for (i, s) in effect.additionalStreams.enumerated() {
@@ -2782,17 +2788,19 @@ class MacDesignViewModel: ObservableObject {
     
     // MARK: - Preview / Transport
     
+    // MARK: Effect Button — selected effect from cursor WITH fade in/out
     func togglePreviewEffect() {
         guard let effect = currentEffect else { return }
         
         if effect.isPlaying() {
+            // Stop with fade-out (uses the effect's outTrans)
             effect.stop()
             isPreviewingEffect = false
         } else {
-            // Use play(true) to go through execute() which properly applies
-            // fade-in, adds to active effects, and sets up state for fade-out
+            // Use play(true) which goes through execute() — applies fade-in,
+            // adds to active effects, and sets up state for fade-out at out-point
             effect.play(true)
-            // If the cursor is positioned beyond the start, seek to that position
+            // If the cursor is positioned beyond the start, seek all streams
             if currentPlaybackPosition > 0 {
                 let absolutePosition = effect.inPoint + currentPlaybackPosition
                 fx.audio.setPos(effect.stream, position: absolutePosition)
@@ -2802,43 +2810,89 @@ class MacDesignViewModel: ObservableObject {
         }
     }
     
+    // MARK: Cue Button — play the whole cue from the start, exactly like perform
     func togglePreviewCue() {
         guard let cueIndex = selectedCueIndex, cueIndex < cues.count else { return }
         let cue = cues[cueIndex]
         
-        if cue.isPlaying() {
-            cue.stop()
+        if isPreviewingCue {
+            // Stop all effects in the cue (with their normal fade-outs)
+            for effect in cue.effects {
+                if effect.isPlaying() || effect.delayPending {
+                    effect.stop()
+                }
+            }
             isPreviewingCue = false
+            isPreviewingEffect = false
         } else {
+            // Stop anything currently playing first
+            if let currentEff = currentEffect, currentEff.isPlaying() {
+                fx.audio.stop(currentEff.stream)
+                currentEff.stopAdditionalStreams()
+                fx.removeActive(currentEff)
+                currentEff.fading = false
+                currentEff.fadeIn = false
+                isPreviewingEffect = false
+            }
+            for effect in cue.effects {
+                if effect.isPlaying() {
+                    fx.audio.stop(effect.stream)
+                    effect.stopAdditionalStreams()
+                    fx.removeActive(effect)
+                    effect.fading = false
+                    effect.fadeIn = false
+                }
+            }
+            
+            // Always play from the start — exactly like the perform screen Go button.
+            // cue.play() iterates all effects, respects delays (play(false)),
+            // applies fade-in/out, levels, EQ, DSP, and adds to active list.
+            currentPlaybackPosition = 0
             cue.play()
             isPreviewingCue = true
         }
     }
     
+    // MARK: Play Icon — selected effect from cursor, NO fades, immediate stop
     func togglePlayFromPosition() {
         guard let effect = currentEffect else { return }
         
         if effect.isPlaying() {
-            effect.stop()
+            // Stop immediately — no fade out
+            fx.audio.stop(effect.stream)
+            effect.stopAdditionalStreams()
+            fx.removeActive(effect)
+            effect.fading = false
+            effect.fadeIn = false
             isPreviewingEffect = false
         } else {
-            // Load via the same output routing (through the mixer)
-            effect.stream = fx.loadOnOutput(documentsPath(effect.file), route: effect.outputRoute, output: effect.output)
-            fx.audio.setLevel(effect.stream, level: effect.level)
+            // Load and play with correct level + EQ/DSP but NO fades
+            let filePath = documentsPath(effect.file)
+            effect.stream = fx.loadOnOutput(filePath, route: effect.outputRoute, output: effect.output)
+            
+            // Apply level using setLevel which applies the ToLevel() perceptual curve.
+            // Do NOT also call fade(to:fadeTime:0) — that sets a raw BASS value and
+            // would override the correct perceptual level.
+            let primaryTrim = effect.trimForOutput(effect.output)
+            let primaryVol = effect.level * primaryTrim
+            fx.audio.setLevel(effect.stream, level: primaryVol)
             fx.audio.setPan(effect.stream, level: effect.pan)
             fx.addEq(effect.stream, eqArray: effect.eq)
             fx.addDsp(effect.stream, dsp: effect.dsp)
             
-            // Also load additional output streams
-            effect.loadAdditionalStreams(filePath: documentsPath(effect.file))
-            for s in effect.additionalStreams {
-                fx.audio.setLevel(s, level: effect.level)
+            effect.loadAdditionalStreams(filePath: filePath)
+            let sorted = effect.sortedAdditionalOutputs
+            for (i, s) in effect.additionalStreams.enumerated() {
+                let trim: Float = (i < sorted.count) ? effect.trimForOutput(sorted[i]) : 1.0
+                let vol = effect.level * trim
+                fx.audio.setLevel(s, level: vol)
                 fx.audio.setPan(s, level: effect.pan)
                 fx.addEq(s, eqArray: effect.eq)
                 fx.addDsp(s, dsp: effect.dsp)
             }
             
-            // Set up effect state so process() can handle out-point and fade-out
+            // Set up effect state so process() can handle out-point
+            // but no fade flags — level is set immediately
             effect.fadeIn = false
             effect.fading = false
             effect.startTime = CACurrentMediaTime()
@@ -2846,12 +2900,12 @@ class MacDesignViewModel: ObservableObject {
             effect.currentVolume = effect.level
             fx.addActive(effect)
             
-            fx.audio.play(effect.stream)
-            for s in effect.additionalStreams { fx.audio.play(s) }
-            // Seek to the current playback position (relative to inPoint)
+            // Seek to current playback position then play
             let absolutePosition = effect.inPoint + currentPlaybackPosition
             fx.audio.setPos(effect.stream, position: absolutePosition)
             for s in effect.additionalStreams { fx.audio.setPos(s, position: absolutePosition) }
+            fx.audio.play(effect.stream)
+            for s in effect.additionalStreams { fx.audio.play(s) }
             isPreviewingEffect = true
         }
     }
