@@ -2695,7 +2695,7 @@ class MacDesignViewModel: ObservableObject {
             let primaryTrim = effect.trimForOutput(effect.output)
             let primaryVol = effectLevel * primaryTrim
             fx.audio.setLevel(effect.stream, level: primaryVol)
-            if !settings.logLevels {
+            if settings.logLevels {
                 fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
             }
             fx.audio.setPan(effect.stream, level: effectPan)
@@ -2705,9 +2705,6 @@ class MacDesignViewModel: ObservableObject {
                 let trim: Float = (i < sortedAdditional.count) ? effect.trimForOutput(sortedAdditional[i]) : 1.0
                 let vol = effectLevel * trim
                 fx.audio.setLevel(s, level: vol)
-                if !settings.logLevels {
-                    fx.audio.fade(to: s, fadeTime: 0, level: vol)
-                }
                 fx.audio.setPan(s, level: effectPan)
             }
         }

@@ -434,7 +434,7 @@ struct MacActiveEffectRow: View {
                             // Reapply effective volume (level × trim) to all streams
                             let primaryVol = floatVal * effect.trimForOutput(effect.output)
                             fx.audio.setLevel(effect.stream, level: primaryVol)
-                            if !settings.logLevels {
+                            if settings.logLevels {
                                 fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
                             }
                             let sorted = effect.sortedAdditionalOutputs
@@ -442,7 +442,7 @@ struct MacActiveEffectRow: View {
                                 let trim: Float = (i < sorted.count) ? effect.trimForOutput(sorted[i]) : 1.0
                                 let vol = floatVal * trim
                                 fx.audio.setLevel(s, level: vol)
-                                if !settings.logLevels {
+                                if settings.logLevels {
                                     fx.audio.fade(to: s, fadeTime: 0, level: vol)
                                 }
                             }
@@ -478,7 +478,7 @@ struct MacActiveEffectRow: View {
                         set: { newValue in
                             effect.currentVolume = Float(newValue)
                             fx.audio.setLevel(effect.stream, level: Float(newValue))
-                            if !settings.logLevels {
+                            if settings.logLevels {
                                 fx.audio.fade(to: effect.stream, fadeTime: 0, level: Float(newValue))
                             }
                             if !settings.performanceMode {
@@ -528,6 +528,7 @@ struct MacOutputVolumeSlider: View {
     let tick: UInt
     
     /// Find the stream handle for this bus index
+    /// Returns 0 if not found (BASS uses 0 for invalid handles)
     private var streamForBus: Int32 {
         if isPrimary {
             return effect.stream
@@ -536,7 +537,7 @@ struct MacOutputVolumeSlider: View {
         if let idx = sorted.firstIndex(of: busIndex), idx < effect.additionalStreams.count {
             return effect.additionalStreams[idx]
         }
-        return -1
+        return 0
     }
     
     /// The trim value for this output (1.0 = unity)
@@ -574,15 +575,33 @@ struct MacOutputVolumeSlider: View {
                 },
                 set: { newValue in
                     let newTrim = Float(newValue)
-                    // Store the trim value
+                    // Store the trim in the effect's persistent outputVolumes
                     effect.setTrimForOutput(busIndex, trim: newTrim)
-                    // Apply effective volume (level × trim) to BASS stream
-                    let effectiveVol = effect.currentVolume * newTrim
-                    let s = streamForBus
-                    if s > 0 {
-                        fx.audio.setLevel(s, level: effectiveVol)
-                        if !settings.logLevels {
-                            fx.audio.fade(to: s, fadeTime: 0, level: effectiveVol)
+                    // Also update currentOutputVolumes so the slider doesn't
+                    // snap back to a stale interpolated value during transitions
+                    effect.currentOutputVolumes[busIndex] = newTrim
+                    // Apply effective volume (level × trim) to ALL BASS streams
+                    // (matching how the Design view and processAnimation work)
+                    let masterVol = effect.currentVolume
+                    // Primary stream
+                    let primaryTrim = effect.trimForOutput(effect.output)
+                    let primaryVol = masterVol * primaryTrim
+                    if effect.stream != 0 {
+                        fx.audio.setLevel(effect.stream, level: primaryVol)
+                        if settings.logLevels {
+                            fx.audio.fade(to: effect.stream, fadeTime: 0, level: primaryVol)
+                        }
+                    }
+                    // Additional streams
+                    let sorted = effect.sortedAdditionalOutputs
+                    for (i, s) in effect.additionalStreams.enumerated() {
+                        let trim: Float = (i < sorted.count) ? effect.trimForOutput(sorted[i]) : 1.0
+                        let vol = masterVol * trim
+                        if s != 0 {
+                            fx.audio.setLevel(s, level: vol)
+                            if settings.logLevels {
+                                fx.audio.fade(to: s, fadeTime: 0, level: vol)
+                            }
                         }
                     }
                 }
