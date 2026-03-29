@@ -33,6 +33,7 @@
 		A10026AA /* AudioOutputRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10026AB /* AudioOutputRoute.swift */; };
 		A10027AA /* MacOutputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10027AB /* MacOutputManager.swift */; };
 		A10028AA /* MacLevelMeterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10028AB /* MacLevelMeterView.swift */; };
+		A10029AA /* MacEffectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10029AB /* MacEffectsView.swift */; };
 		A10031AA /* ioapi.c in Sources */ = {isa = PBXBuildFile; fileRef = A10031AB /* ioapi.c */; };
 		A10032AA /* mztools.c in Sources */ = {isa = PBXBuildFile; fileRef = A10032AB /* mztools.c */; };
 		A10033AA /* unzip.c in Sources */ = {isa = PBXBuildFile; fileRef = A10033AB /* unzip.c */; };
@@ -148,6 +149,7 @@
 		A10026AB /* AudioOutputRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioOutputRoute.swift; path = "../FX-Live2/FX-Live2/AudioOutputRoute.swift"; sourceTree = "<group>"; };
 		A10027AB /* MacOutputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOutputManager.swift; sourceTree = "<group>"; };
 		A10028AB /* MacLevelMeterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLevelMeterView.swift; sourceTree = "<group>"; };
+		A10029AB /* MacEffectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacEffectsView.swift; sourceTree = "<group>"; };
 		A10030AB /* crypt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = crypt.h; path = "../FX-Live2/minizip/crypt.h"; sourceTree = "<group>"; };
 		A10031AB /* ioapi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = ioapi.c; path = "../FX-Live2/minizip/ioapi.c"; sourceTree = "<group>"; };
 		A10031AC /* ioapi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ioapi.h; path = "../FX-Live2/minizip/ioapi.h"; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 				A10008AB /* MacSettingsView.swift */,
 				A10027AB /* MacOutputManager.swift */,
 				A10028AB /* MacLevelMeterView.swift */,
+				A10029AB /* MacEffectsView.swift */,
 				A10009AB /* FX-Live-Mac-Bridging-Header.h */,
 				B20001AB /* MacShowManager.swift */,
 				A1G00008 /* DemoResources */,
@@ -528,6 +531,7 @@
 				A10026AA /* AudioOutputRoute.swift in Sources */,
 				A10027AA /* MacOutputManager.swift in Sources */,
 				A10028AA /* MacLevelMeterView.swift in Sources */,
+				A10029AA /* MacEffectsView.swift in Sources */,
 				A10021AA /* audioEngine.m in Sources */,
 				A10022AA /* EQSettings.m in Sources */,
 				A10023AA /* DSPSettings.m in Sources */,

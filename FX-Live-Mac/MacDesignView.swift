@@ -29,6 +29,10 @@ struct MacDesignView: View {
             MacEffectEditorPanel(viewModel: viewModel)
                 .frame(minWidth: 400, idealWidth: 500)
             
+            // Effects Panel: EQ, Reverb, Echo
+            MacEffectsPanel(viewModel: viewModel)
+                .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
+            
             // Far Right: Full-height Output Level Meters
             MacOutputMeterStrip(
                 meterLeftDB: viewModel.meterLeftDB,
@@ -3009,6 +3013,50 @@ class MacDesignViewModel: ObservableObject {
             fileDuration = effect.outPoint > 0 ? effect.outPoint : 0
             print("📏 File duration fallback to outPoint: \(fileDuration)s")
         }
+    }
+    
+    // MARK: - EQ / DSP Effects
+    
+    /// Reset all EQ bands and DSP effects (reverb + echo) for the current effect
+    func resetAllEffects() {
+        guard let effect = currentEffect else { return }
+        
+        // Reset EQ bands
+        let defaultFreqs: [Float] = [80, 440, 10000]
+        for i in 0..<effect.eq.count {
+            effect.eq[i].active = false
+            effect.eq[i].gain = 0
+            effect.eq[i].frequency = i < defaultFreqs.count ? defaultFreqs[i] : 5000
+            effect.eq[i].bandwidth = 1.0
+        }
+        
+        // Reset DSP
+        effect.dsp.reverbActive = false
+        effect.dsp.reverbGain = 0
+        effect.dsp.reverbMix = -6
+        effect.dsp.reverbDelay = 1000
+        
+        effect.dsp.echoActive = false
+        effect.dsp.echoWetDry = 50
+        effect.dsp.echoFeedback = 50
+        effect.dsp.echoDelayL = 500
+        effect.dsp.echoDelayR = 500
+        
+        // Live update if playing
+        if effect.isPlaying() {
+            fx.updateEq(effect.eq)
+            fx.updateDsp(effect.stream, dsp: effect.dsp)
+            for s in effect.additionalStreams {
+                fx.updateDsp(s, dsp: effect.dsp)
+            }
+        }
+        if fx.previewStream != 0 && fx.previewStream != -1 {
+            fx.updateEq(effect.eq)
+            fx.updateDsp(fx.previewStream, dsp: effect.dsp)
+        }
+        
+        fx.show.save()
+        objectWillChange.send()
     }
     
     // MARK: - Trim Controls
