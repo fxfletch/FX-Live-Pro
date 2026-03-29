@@ -885,7 +885,7 @@ class MacMusicViewModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Select Music Track"
         panel.directoryURL = URL(fileURLWithPath: documentsPath())
         
@@ -1025,7 +1025,7 @@ class MacMusicViewModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Select Spot Effect"
         panel.directoryURL = URL(fileURLWithPath: documentsPath())
         
@@ -1076,7 +1076,7 @@ class MacMusicViewModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Select Announcement"
         panel.directoryURL = URL(fileURLWithPath: documentsPath())
         

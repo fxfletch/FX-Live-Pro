@@ -33,11 +33,14 @@ struct MacDesignView: View {
             MacOutputMeterStrip(
                 meterLeftDB: viewModel.meterLeftDB,
                 meterRightDB: viewModel.meterRightDB,
-                busLevels: [],
-                multiOutputEnabled: false,
-                busCount: 0
+                busLevels: viewModel.busLevels,
+                multiOutputEnabled: MacOutputManager.shared.multiOutputEnabled,
+                busCount: MacOutputManager.shared.buses.count
             )
-            .frame(width: 50)
+            .frame(width: MacOutputManager.shared.multiOutputEnabled && MacOutputManager.shared.buses.count > 1
+                   ? CGFloat(30 + MacOutputManager.shared.buses.count * 28)
+                   : 50)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(4)
         .onAppear {
@@ -407,6 +410,7 @@ struct MacCuePropertiesSection: View {
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 50)
                             .onSubmit { viewModel.saveCueProperties() }
+                            .onChange(of: viewModel.autoFollowDelay) { _, _ in viewModel.saveCueProperties() }
                         Text("s")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -2098,6 +2102,9 @@ class MacDesignViewModel: ObservableObject {
     @Published var midiTrigger = ""
     @Published var isMIDILearning = false
     
+    /// Flag to suppress onChange-triggered saves while loading a cue's properties
+    private var isLoadingCue = false
+    
     // Effect properties
     @Published var effectName = ""
     @Published var effectFile = ""
@@ -2142,6 +2149,7 @@ class MacDesignViewModel: ObservableObject {
     // Output meters
     @Published var meterLeftDB: Float = -100
     @Published var meterRightDB: Float = -100
+    @Published var busLevels: [(left: Float, right: Float)] = []
     
     // Clipboard
     @Published var canPaste = false
@@ -2199,6 +2207,18 @@ class MacDesignViewModel: ObservableObject {
         let levels = fx.getMixerLevels()
         meterLeftDB = levels.left
         meterRightDB = levels.right
+        
+        // Poll per-bus levels if multi-output is enabled
+        let outputMgr = MacOutputManager.shared
+        if outputMgr.multiOutputEnabled {
+            var newBusLevels: [(left: Float, right: Float)] = []
+            for i in 0..<outputMgr.buses.count {
+                newBusLevels.append(outputMgr.getLevels(for: i))
+            }
+            busLevels = newBusLevels
+        } else {
+            busLevels = []
+        }
         
         guard let effect = currentEffect else { return }
         
@@ -2272,6 +2292,7 @@ class MacDesignViewModel: ObservableObject {
     
     func selectCue(at index: Int) {
         guard index >= 0 && index < cues.count else { return }
+        isLoadingCue = true
         selectedCueIndex = index
         selectedEffectIndex = nil
         
@@ -2282,6 +2303,7 @@ class MacDesignViewModel: ObservableObject {
         autoFollowDelay = cue.autoFollowDelay
         autoFollowEnd = cue.autoFollowEnd
         midiTrigger = cue.midi
+        isLoadingCue = false
         
         // Reset effect editor
         resetEffectState()
@@ -2419,6 +2441,7 @@ class MacDesignViewModel: ObservableObject {
     }
     
     func saveCueProperties() {
+        guard !isLoadingCue else { return }
         guard let index = selectedCueIndex, index < cues.count else { return }
         let cue = cues[index]
         cue.name = cueName
@@ -2547,7 +2570,7 @@ class MacDesignViewModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Select Audio File"
         panel.directoryURL = URL(fileURLWithPath: documentsPath())
         
@@ -2734,7 +2757,7 @@ class MacDesignViewModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Select Audio File"
         panel.directoryURL = URL(fileURLWithPath: documentsPath())
         

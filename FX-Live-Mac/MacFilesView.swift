@@ -167,7 +167,7 @@ struct MacFilesView: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mp3, .wav, .aiff]
+        panel.allowedContentTypes = [.audio, .mpeg4Audio, .mpeg4Movie, .mp3, .wav, .aiff]
         panel.title = "Import Audio Files"
         
         panel.begin { response in
