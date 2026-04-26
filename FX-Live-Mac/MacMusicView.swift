@@ -704,6 +704,92 @@ struct MacSpotPropertiesEditor: View {
                     }
                 }
                 
+                // Output Routing
+                if MacOutputManager.shared.buses.count > 1 {
+                    Divider()
+                    
+                    HStack {
+                        Text("Output")
+                            .font(.caption)
+                            .frame(width: 70, alignment: .leading)
+                        
+                        let busCount = MacOutputManager.shared.buses.count
+                        let selectedOutputs = effect.allOutputs
+                        
+                        HStack(spacing: 2) {
+                            ForEach(0..<busCount, id: \.self) { i in
+                                let isSelected = selectedOutputs.contains(i)
+                                Button {
+                                    viewModel.toggleSpotOutput(at: spotIndex, busIndex: i)
+                                } label: {
+                                    Text(OutputBus.labelFor(i))
+                                        .font(.caption)
+                                        .frame(width: 28, height: 22)
+                                        .background(isSelected ? Color.accentColor : Color.clear)
+                                        .foregroundColor(isSelected ? .white : .primary)
+                                        .cornerRadius(4)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Per-output volume trims when multiple outputs selected
+                    if selectedOutputs.count > 1 {
+                        VStack(spacing: 4) {
+                            HStack {
+                                Text("Output Trims")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Button("Reset") {
+                                    effect.outputVolumes.removeAll()
+                                    fx.show.save()
+                                    viewModel.objectWillChange.send()
+                                }
+                                .font(.system(size: 10))
+                                .buttonStyle(.plain)
+                                .foregroundColor(.blue)
+                            }
+                            
+                            ForEach(selectedOutputs.sorted(), id: \.self) { busIndex in
+                                HStack(spacing: 6) {
+                                    Text(OutputBus.labelFor(busIndex))
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .frame(width: 20)
+                                        .foregroundColor(busIndex == effect.output ? .accentColor : .secondary)
+                                    
+                                    Slider(value: Binding(
+                                        get: { Double(effect.outputVolumes[busIndex] ?? 1.0) },
+                                        set: { newVal in
+                                            effect.outputVolumes[busIndex] = Float(newVal)
+                                            if effect.isPlaying() {
+                                                let stream = busIndex == effect.output ? effect.stream : effect.additionalStreams.first ?? effect.stream
+                                                fx.audio.setLevel(stream, level: effect.level * Float(newVal))
+                                            }
+                                            fx.show.save()
+                                        }
+                                    ), in: 0...2)
+                                    
+                                    let vol = effect.outputVolumes[busIndex] ?? 1.0
+                                    Text(String(format: "%.0f%%", vol * 100))
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .frame(width: 40)
+                                        .foregroundColor(vol > 1.0 ? .orange : .primary)
+                                }
+                            }
+                        }
+                        .padding(6)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: .controlBackgroundColor).opacity(0.5)))
+                    }
+                }
+                
                 // Loop toggle
                 HStack {
                     Toggle(isOn: Binding(
@@ -1702,6 +1788,38 @@ class MacMusicViewModel: ObservableObject {
     
     func resetSpotTrimZoom() {
         spotTrimZoomLevel = 1.0
+    }
+    
+    // MARK: - Spot Output Routing
+    
+    func toggleSpotOutput(at spotIndex: Int, busIndex: Int) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        let effect = fx.show.spotEffects[spotIndex]
+        var selected = effect.allOutputs
+        
+        if selected.contains(busIndex) {
+            // Don't allow deselecting the last one
+            if selected.count > 1 {
+                selected.remove(busIndex)
+            }
+        } else {
+            selected.insert(busIndex)
+        }
+        
+        let sorted = selected.sorted()
+        if let primary = sorted.first {
+            effect.output = primary
+            effect.additionalOutputs = Set(sorted.dropFirst())
+        } else {
+            effect.output = 0
+            effect.additionalOutputs = []
+        }
+        
+        // Clean output volumes to only include selected outputs
+        effect.outputVolumes = effect.outputVolumes.filter { selected.contains($0.key) }
+        
+        fx.show.save()
+        objectWillChange.send()
     }
     
     func formatDuration(_ seconds: Float) -> String {
