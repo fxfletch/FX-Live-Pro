@@ -755,7 +755,7 @@ struct MacFullWaveformTrimView: View {
     private let handleWidth: CGFloat = 20
     
     private var barCount: Int {
-        min(Int(CGFloat(200) * viewModel.trimZoomLevel), 2000)
+        min(Int(CGFloat(400) * viewModel.trimZoomLevel), 4000)
     }
     
     var body: some View {
@@ -778,12 +778,53 @@ struct MacFullWaveformTrimView: View {
                         // Waveform layer
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Color(nsColor: .textBackgroundColor))
+                                .allowsHitTesting(false)
                             
                             trimWaveformCanvas(contentWidth: contentWidth)
                             trimDimmedRegions(contentWidth: contentWidth)
                                 .allowsHitTesting(false)
                             trimPlayhead(contentWidth: contentWidth)
                                 .allowsHitTesting(false)
+                            
+                            // Click/drag to seek on the full waveform
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 1)
+                                        .onChanged { value in
+                                            guard viewModel.fileDuration > 0 else { return }
+                                            let fraction = Float(value.location.x / contentWidth)
+                                            let absTime = min(max(fraction, 0), 1) * viewModel.fileDuration
+                                            if absTime < viewModel.inPoint || absTime > viewModel.outPoint {
+                                                // Dragging outside trim region — move nearest trim handle
+                                                if absTime < viewModel.inPoint {
+                                                    viewModel.updateInPointAbsolute(absTime)
+                                                } else {
+                                                    viewModel.updateOutPointAbsolute(absTime)
+                                                }
+                                            } else {
+                                                let relTime = absTime - viewModel.inPoint
+                                                viewModel.seekToPosition(relTime)
+                                            }
+                                        }
+                                )
+                                .onTapGesture { location in
+                                    guard viewModel.fileDuration > 0 else { return }
+                                    let fraction = Float(location.x / contentWidth)
+                                    let absTime = min(max(fraction, 0), 1) * viewModel.fileDuration
+                                    if absTime < viewModel.inPoint || absTime > viewModel.outPoint {
+                                        // Tapping outside trim region — move nearest trim handle
+                                        if absTime < viewModel.inPoint {
+                                            viewModel.updateInPointAbsolute(absTime)
+                                        } else {
+                                            viewModel.updateOutPointAbsolute(absTime)
+                                        }
+                                        viewModel.finishTrimDrag()
+                                    } else {
+                                        let relTime = absTime - viewModel.inPoint
+                                        viewModel.seekToPosition(relTime)
+                                    }
+                                }
                             
                             if viewModel.fileDuration <= 0 {
                                 Text("No audio loaded")
@@ -1288,9 +1329,9 @@ struct MacAudioTimelineView: View {
     
     /// Dynamic bar count scales with zoom
     private var barCount: Int {
-        let base = 200
+        let base = 400
         let zoomed = Int(CGFloat(base) * viewModel.timelineZoomLevel)
-        return min(zoomed, 2000)
+        return min(zoomed, 4000)
     }
     
     var body: some View {
@@ -2957,8 +2998,8 @@ class MacDesignViewModel: ObservableObject {
             return
         }
         let filePath = documentsPath(effect.file)
-        let segmentCount = 200
-        let hiResCount = 800
+        let segmentCount = 400
+        let hiResCount = 16600
         let fromTime = effect.inPoint
         let toTime = effect.outPoint > effect.inPoint ? effect.outPoint : effect.inPoint + 1
         
@@ -2980,8 +3021,8 @@ class MacDesignViewModel: ObservableObject {
             return
         }
         let filePath = documentsPath(effect.file)
-        let segmentCount = 200
-        let hiResCount = 800  // Higher resolution for zoomed view
+        let segmentCount = 400
+        let hiResCount = 1600  // Higher resolution for zoomed view
         
         DispatchQueue.global(qos: .userInitiated).async {
             let data = fx.getWaveformData(filePath: filePath, segments: segmentCount)
