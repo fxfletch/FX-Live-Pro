@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct MacMusicView: View {
     @StateObject private var viewModel = MacMusicViewModel()
@@ -615,8 +616,19 @@ struct MacSpotPropertiesEditor: View {
                             .frame(width: 70, alignment: .leading)
                         Text(viewModel.formatDuration(effect.getDuration()))
                             .font(.caption.monospacedDigit())
+                        if viewModel.spotFileDuration > 0 && effect.getDuration() < viewModel.spotFileDuration {
+                            Text("(of \(viewModel.formatDuration(viewModel.spotFileDuration)))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         Spacer()
                     }
+                }
+                
+                // Waveform Trim View
+                if viewModel.spotFileDuration > 0 {
+                    MacSpotWaveformTrimView(viewModel: viewModel)
+                        .padding(.vertical, 4)
                 }
                 
                 Divider()
@@ -736,6 +748,378 @@ struct MacSpotPropertiesEditor: View {
     }
 }
 
+// MARK: - Spot Waveform Trim View
+
+struct MacSpotWaveformTrimView: View {
+    @ObservedObject var viewModel: MacMusicViewModel
+    @State private var draggingHandle: TrimHandle? = nil
+    
+    private enum TrimHandle { case inPoint, outPoint }
+    
+    private let waveformHeight: CGFloat = 80
+    private let rulerHeight: CGFloat = 18
+    private let handleWidth: CGFloat = 16
+    
+    private var barCount: Int {
+        min(Int(CGFloat(300) * viewModel.spotTrimZoomLevel), 3000)
+    }
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            // Header with trim controls
+            HStack(spacing: 6) {
+                Text("WAVEFORM")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button(action: { viewModel.autoTrimSpotSilence() }) {
+                    Label("Auto Trim", systemImage: "waveform.badge.minus")
+                        .font(.system(size: 9))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.accentColor)
+                .help("Auto-trim silence")
+                
+                Button(action: { viewModel.resetSpotTrimPoints() }) {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                        .font(.system(size: 9))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+                .help("Reset trim to full file")
+                
+                Divider().frame(height: 10)
+                
+                // Zoom controls
+                HStack(spacing: 3) {
+                    Button(action: { viewModel.zoomOutSpotTrim() }) {
+                        Image(systemName: "minus.magnifyingglass")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.spotTrimZoomLevel <= 1.0)
+                    
+                    Text("\(Int(viewModel.spotTrimZoomLevel * 100))%")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 32)
+                    
+                    Button(action: { viewModel.zoomInSpotTrim() }) {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.spotTrimZoomLevel >= 20.0)
+                    
+                    if viewModel.spotTrimZoomLevel > 1.0 {
+                        Button(action: { viewModel.resetSpotTrimZoom() }) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 9))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Fit to Window")
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color(nsColor: .controlBackgroundColor)))
+            }
+            
+            // Waveform
+            GeometryReader { outerGeo in
+                let viewportWidth = outerGeo.size.width
+                let contentWidth = viewportWidth * viewModel.spotTrimZoomLevel
+                
+                AlwaysScrollableHorizontalView(
+                    contentWidth: contentWidth,
+                    contentHeight: waveformHeight + rulerHeight
+                ) {
+                    VStack(spacing: 0) {
+                        // Time ruler
+                        spotTimeRuler(contentWidth: contentWidth)
+                            .frame(width: contentWidth, height: rulerHeight)
+                        
+                        ZStack(alignment: .leading) {
+                            Rectangle().fill(Color(nsColor: .textBackgroundColor))
+                                .allowsHitTesting(false)
+                            
+                            spotWaveformCanvas(contentWidth: contentWidth)
+                            spotDimmedRegions(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            spotPlayhead(contentWidth: contentWidth)
+                                .allowsHitTesting(false)
+                            
+                            // Click/drag to seek or move trim
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 1)
+                                        .onChanged { value in
+                                            guard viewModel.spotFileDuration > 0 else { return }
+                                            let fraction = Float(value.location.x / contentWidth)
+                                            let absTime = min(max(fraction, 0), 1) * viewModel.spotFileDuration
+                                            if absTime < viewModel.spotInPoint {
+                                                viewModel.updateSpotInPoint(absTime)
+                                            } else if absTime > viewModel.spotOutPoint {
+                                                viewModel.updateSpotOutPoint(absTime)
+                                            }
+                                        }
+                                )
+                                .onTapGesture { location in
+                                    guard viewModel.spotFileDuration > 0 else { return }
+                                    let fraction = Float(location.x / contentWidth)
+                                    let absTime = min(max(fraction, 0), 1) * viewModel.spotFileDuration
+                                    if absTime < viewModel.spotInPoint {
+                                        viewModel.updateSpotInPoint(absTime)
+                                    } else if absTime > viewModel.spotOutPoint {
+                                        viewModel.updateSpotOutPoint(absTime)
+                                    }
+                                    viewModel.finishSpotTrimDrag()
+                                }
+                            
+                            // Trim handles
+                            if viewModel.spotFileDuration > 0 {
+                                spotTrimHandle(
+                                    label: "IN", color: .green,
+                                    fraction: CGFloat(viewModel.spotInPoint / viewModel.spotFileDuration),
+                                    contentWidth: contentWidth,
+                                    handleType: .inPoint
+                                )
+                                
+                                spotTrimHandle(
+                                    label: "OUT", color: .orange,
+                                    fraction: CGFloat(viewModel.spotOutPoint / viewModel.spotFileDuration),
+                                    contentWidth: contentWidth,
+                                    handleType: .outPoint
+                                )
+                            }
+                        }
+                        .frame(width: contentWidth, height: waveformHeight)
+                        .coordinateSpace(name: "spotTrimWaveform")
+                    }
+                }
+                .frame(height: waveformHeight + rulerHeight + (viewModel.spotTrimZoomLevel > 1 ? 15 : 0))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                )
+            }
+            .frame(height: waveformHeight + rulerHeight + (viewModel.spotTrimZoomLevel > 1 ? 15 : 0))
+            
+            // IN / OUT labels
+            if viewModel.spotFileDuration > 0 {
+                HStack {
+                    HStack(spacing: 2) {
+                        Image(systemName: "arrowtriangle.right.fill").font(.system(size: 5))
+                        Text("IN \(formatDetailedTime(viewModel.spotInPoint))")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    }.foregroundColor(.green)
+                    Spacer()
+                    HStack(spacing: 2) {
+                        Text("OUT \(formatDetailedTime(viewModel.spotOutPoint))")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        Image(systemName: "arrowtriangle.left.fill").font(.system(size: 5))
+                    }.foregroundColor(.orange)
+                }
+                .padding(.horizontal, 2)
+            }
+        }
+    }
+    
+    // MARK: - Trim Handle
+    
+    private func spotTrimHandle(label: String, color: Color, fraction: CGFloat, contentWidth: CGFloat, handleType: TrimHandle) -> some View {
+        let x = contentWidth * fraction
+        
+        return ZStack {
+            Rectangle()
+                .fill(color)
+                .frame(width: draggingHandle == handleType ? 3 : 2, height: waveformHeight)
+                .shadow(color: color.opacity(0.6), radius: draggingHandle == handleType ? 4 : 2)
+            
+            VStack(spacing: 0) {
+                Text(label)
+                    .font(.system(size: 8, weight: .heavy))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(color)
+                            .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+                    )
+                
+                Image(systemName: "arrowtriangle.down.fill")
+                    .font(.system(size: 5))
+                    .foregroundColor(color)
+                    .offset(y: -2)
+                
+                Spacer()
+                
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(color)
+                    .frame(width: 12, height: 18)
+                    .overlay(
+                        VStack(spacing: 2) {
+                            ForEach(0..<3, id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(Color.white.opacity(0.6))
+                                    .frame(width: 5, height: 1)
+                            }
+                        }
+                    )
+                    .shadow(color: .black.opacity(0.3), radius: 2)
+            }
+            .frame(height: waveformHeight)
+        }
+        .frame(width: handleWidth, height: waveformHeight)
+        .contentShape(Rectangle())
+        .offset(x: x - handleWidth / 2)
+        .gesture(
+            DragGesture(minimumDistance: 1, coordinateSpace: .named("spotTrimWaveform"))
+                .onChanged { value in
+                    draggingHandle = handleType
+                    let newX = value.startLocation.x + value.translation.width
+                    let newFrac = Float(max(0, min(newX / contentWidth, 1)))
+                    let timePos = newFrac * viewModel.spotFileDuration
+                    switch handleType {
+                    case .inPoint:
+                        viewModel.updateSpotInPoint(timePos)
+                    case .outPoint:
+                        viewModel.updateSpotOutPoint(timePos)
+                    }
+                }
+                .onEnded { _ in
+                    draggingHandle = nil
+                    viewModel.finishSpotTrimDrag()
+                }
+        )
+        .onHover { hovering in
+            if hovering { NSCursor.resizeLeftRight.push() }
+            else { NSCursor.pop() }
+        }
+    }
+    
+    // MARK: - Time Ruler
+    
+    private func spotTimeRuler(contentWidth: CGFloat) -> some View {
+        Canvas { context, size in
+            let duration = viewModel.spotFileDuration
+            guard duration > 0 else { return }
+            
+            let pixelsPerSecond = size.width / CGFloat(duration)
+            let tickInterval = rulerTickInterval(pixelsPerSecond: pixelsPerSecond)
+            
+            var time: Float = 0
+            while time <= duration {
+                let x = CGFloat(time / duration) * size.width
+                
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: x, y: size.height))
+                    p.addLine(to: CGPoint(x: x, y: size.height - 8))
+                }, with: .color(.secondary.opacity(0.6)), lineWidth: 0.5)
+                
+                context.draw(
+                    Text(formatDetailedTime(time))
+                        .font(.system(size: 7, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary),
+                    at: CGPoint(x: x + 2, y: 5), anchor: .leading
+                )
+                
+                time += tickInterval
+                if tickInterval <= 0 { break }
+            }
+            
+            context.stroke(Path { p in
+                p.move(to: CGPoint(x: 0, y: size.height - 0.5))
+                p.addLine(to: CGPoint(x: size.width, y: size.height - 0.5))
+            }, with: .color(.secondary.opacity(0.3)), lineWidth: 0.5)
+        }
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+    }
+    
+    private func rulerTickInterval(pixelsPerSecond: CGFloat) -> Float {
+        for interval in [Float(0.1), 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300] {
+            if pixelsPerSecond * CGFloat(interval) >= 60 { return interval }
+        }
+        return 300
+    }
+    
+    // MARK: - Waveform Canvas
+    
+    private func spotWaveformCanvas(contentWidth: CGFloat) -> some View {
+        let inFrac = viewModel.spotFileDuration > 0 ? Float(viewModel.spotInPoint / viewModel.spotFileDuration) : Float(0)
+        let outFrac = viewModel.spotFileDuration > 0 ? Float(viewModel.spotOutPoint / viewModel.spotFileDuration) : Float(1)
+        let n = barCount
+        return Canvas { context, size in
+            let barW = max(1.0, size.width / CGFloat(n) - 0.5)
+            for i in 0..<n {
+                let f = Float(i) / Float(n)
+                let inTrim = f >= inFrac && f <= outFrac
+                let h = barHeight(for: i, totalBars: n)
+                let bh = size.height * h
+                let rect = CGRect(x: CGFloat(i) * (barW + 0.5), y: (size.height - bh) / 2, width: barW, height: bh)
+                context.fill(Path(roundedRect: rect, cornerRadius: 0.5),
+                             with: .color(inTrim ? .accentColor.opacity(0.55) : .gray.opacity(0.15)))
+            }
+        }
+        .frame(width: contentWidth, height: waveformHeight)
+        .allowsHitTesting(false)
+    }
+    
+    private func barHeight(for index: Int, totalBars: Int) -> CGFloat {
+        let data = viewModel.spotTrimZoomLevel > 1.5 && !viewModel.spotHiResWaveformData.isEmpty
+            ? viewModel.spotHiResWaveformData : viewModel.spotWaveformData
+        if !data.isEmpty {
+            let i = min(index * data.count / totalBars, data.count - 1)
+            return max(0.03, min(0.95, 0.03 + CGFloat(data[i]) * 0.92))
+        }
+        return 0.03
+    }
+    
+    // MARK: - Dimmed Regions
+    
+    private func spotDimmedRegions(contentWidth: CGFloat) -> some View {
+        let inX = viewModel.spotFileDuration > 0 ? contentWidth * CGFloat(viewModel.spotInPoint / viewModel.spotFileDuration) : 0
+        let outX = viewModel.spotFileDuration > 0 ? contentWidth * CGFloat(viewModel.spotOutPoint / viewModel.spotFileDuration) : contentWidth
+        return ZStack(alignment: .leading) {
+            if inX > 0 {
+                Rectangle().fill(Color.black.opacity(0.35)).frame(width: inX, height: waveformHeight)
+            }
+            if outX < contentWidth {
+                Rectangle().fill(Color.black.opacity(0.35)).frame(width: contentWidth - outX, height: waveformHeight).offset(x: outX)
+            }
+        }
+    }
+    
+    // MARK: - Playhead
+    
+    private func spotPlayhead(contentWidth: CGFloat) -> some View {
+        Group {
+            if let idx = viewModel.editingSpotIndex, idx < fx.show.spotEffects.count,
+               fx.show.spotEffects[idx].isPlaying(), viewModel.spotFileDuration > 0 {
+                let pos = fx.show.spotEffects[idx].getPosition()
+                let posX = contentWidth * CGFloat(min(max(pos / viewModel.spotFileDuration, 0), 1))
+                Rectangle()
+                    .fill(Color.green)
+                    .frame(width: 2)
+                    .shadow(color: Color.green.opacity(0.6), radius: 2)
+                    .offset(x: posX - 1)
+            }
+        }
+    }
+    
+    private func formatDetailedTime(_ seconds: Float) -> String {
+        let total = max(0, seconds)
+        let mins = Int(total) / 60
+        let secs = total - Float(mins * 60)
+        return String(format: "%d:%05.2f", mins, secs)
+    }
+}
+
 // MARK: - View Model
 
 @MainActor
@@ -764,6 +1148,15 @@ class MacMusicViewModel: ObservableObject {
     @Published var showingRenameAlert = false
     @Published var renameText = ""
     private var renamingSpotIndex: Int = 0
+    
+    // Waveform / Trim state for the currently-edited spot
+    @Published var spotWaveformData: [Float] = []
+    @Published var spotHiResWaveformData: [Float] = []
+    @Published var spotFileDuration: Float = 0
+    @Published var spotInPoint: Float = 0
+    @Published var spotOutPoint: Float = 0
+    @Published var spotTrimZoomLevel: CGFloat = 1.0
+    @Published var spotCurrentPlaybackPosition: Float = 0
     
     private var timer: Timer?
     
@@ -1045,8 +1438,20 @@ class MacMusicViewModel: ObservableObject {
                     fx.show.spotEffects[index].outPoint = Float(fx.audio.getDur(stream))
                     fx.audio.stop(stream)
                 }
+                // Fallback: use AVFoundation if BASS didn't return a valid duration
+                if fx.show.spotEffects[index].outPoint <= 0 {
+                    let asset = AVURLAsset(url: URL(fileURLWithPath: destPath))
+                    let duration = Float(CMTimeGetSeconds(asset.duration))
+                    if duration > 0 {
+                        fx.show.spotEffects[index].outPoint = duration
+                    }
+                }
                 fx.show.save()
                 self?.updateSpotData()
+                // Load waveform if this spot is being edited
+                if self?.editingSpotIndex == index {
+                    self?.loadSpotWaveformData(for: index)
+                }
             }
         }
     }
@@ -1096,8 +1501,20 @@ class MacMusicViewModel: ObservableObject {
                     fx.show.spotEffects[spotIdx].outPoint = Float(fx.audio.getDur(stream))
                     fx.audio.stop(stream)
                 }
+                // Fallback: use AVFoundation if BASS didn't return a valid duration
+                if fx.show.spotEffects[spotIdx].outPoint <= 0 {
+                    let asset = AVURLAsset(url: URL(fileURLWithPath: destPath))
+                    let duration = Float(CMTimeGetSeconds(asset.duration))
+                    if duration > 0 {
+                        fx.show.spotEffects[spotIdx].outPoint = duration
+                    }
+                }
                 fx.show.save()
                 self?.updateSpotData()
+                // Load waveform if this spot is being edited
+                if self?.editingSpotIndex == spotIdx {
+                    self?.loadSpotWaveformData(for: spotIdx)
+                }
             }
         }
     }
@@ -1110,6 +1527,7 @@ class MacMusicViewModel: ObservableObject {
             editingSpotIndex = nil
         } else {
             editingSpotIndex = spotIndex
+            loadSpotWaveformData(for: spotIndex)
         }
     }
     
@@ -1170,6 +1588,107 @@ class MacMusicViewModel: ObservableObject {
         guard spotIndex < fx.show.spotEffects.count else { return }
         fx.show.spotEffects[spotIndex].loop = loop
         fx.show.save()
+    }
+    
+    // MARK: - Spot Waveform & Trim
+    
+    func loadSpotWaveformData(for spotIndex: Int) {
+        guard spotIndex < fx.show.spotEffects.count else { return }
+        let effect = fx.show.spotEffects[spotIndex]
+        guard !effect.file.isEmpty else {
+            spotWaveformData = []
+            spotHiResWaveformData = []
+            spotFileDuration = 0
+            return
+        }
+        let filePath = documentsPath(effect.file)
+        
+        // Load file duration
+        fx.loadPreview(filePath)
+        let dur = fx.getPreviewDurationSecs()
+        if dur > 0 {
+            spotFileDuration = dur
+        } else {
+            spotFileDuration = effect.outPoint > 0 ? effect.outPoint : 0
+        }
+        
+        spotInPoint = effect.inPoint
+        spotOutPoint = effect.outPoint
+        spotCurrentPlaybackPosition = 0
+        spotTrimZoomLevel = 1.0
+        
+        // Load waveform data on background thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let data = fx.getWaveformData(filePath: filePath, segments: 400)
+            let hiRes = fx.getWaveformData(filePath: filePath, segments: 1600)
+            DispatchQueue.main.async { [weak self] in
+                self?.spotWaveformData = data
+                self?.spotHiResWaveformData = hiRes
+            }
+        }
+    }
+    
+    func updateSpotInPoint(_ newInPoint: Float) {
+        guard let idx = editingSpotIndex, idx < fx.show.spotEffects.count else { return }
+        let clamped = max(0, min(newInPoint, spotOutPoint - 0.1))
+        spotInPoint = clamped
+        fx.show.spotEffects[idx].inPoint = clamped
+        fx.show.save()
+    }
+    
+    func updateSpotOutPoint(_ newOutPoint: Float) {
+        guard let idx = editingSpotIndex, idx < fx.show.spotEffects.count else { return }
+        let clamped = min(spotFileDuration, max(newOutPoint, spotInPoint + 0.1))
+        spotOutPoint = clamped
+        fx.show.spotEffects[idx].outPoint = clamped
+        fx.show.save()
+    }
+    
+    func finishSpotTrimDrag() {
+        objectWillChange.send()
+    }
+    
+    func resetSpotTrimPoints() {
+        guard let idx = editingSpotIndex, idx < fx.show.spotEffects.count, spotFileDuration > 0 else { return }
+        spotInPoint = 0
+        spotOutPoint = spotFileDuration
+        fx.show.spotEffects[idx].inPoint = 0
+        fx.show.spotEffects[idx].outPoint = spotFileDuration
+        fx.show.save()
+        objectWillChange.send()
+    }
+    
+    func autoTrimSpotSilence() {
+        guard let idx = editingSpotIndex, idx < fx.show.spotEffects.count, spotFileDuration > 0 else { return }
+        let effect = fx.show.spotEffects[idx]
+        let filePath = documentsPath(effect.file)
+        
+        var trimIn: Float = 0
+        var trimOut: Float = 0
+        fx.audio.getTrim(filePath, inPoint: &trimIn, outPont: &trimOut)
+        
+        if trimIn >= 0 && trimIn < spotFileDuration {
+            spotInPoint = trimIn
+            effect.inPoint = trimIn
+        }
+        if trimOut > spotInPoint && trimOut <= spotFileDuration {
+            spotOutPoint = trimOut
+            effect.outPoint = trimOut
+        }
+        fx.show.save()
+        objectWillChange.send()
+    }
+    
+    func zoomInSpotTrim() {
+        spotTrimZoomLevel = min(spotTrimZoomLevel * 1.5, 20.0)
+    }
+    
+    func zoomOutSpotTrim() {
+        spotTrimZoomLevel = max(spotTrimZoomLevel / 1.5, 1.0)
+    }
+    
+    func resetSpotTrimZoom() {
+        spotTrimZoomLevel = 1.0
     }
     
     func formatDuration(_ seconds: Float) -> String {
