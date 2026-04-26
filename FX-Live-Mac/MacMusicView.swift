@@ -270,7 +270,13 @@ struct MacMusicView: View {
                                         hasFile: viewModel.spotHasFile[index],
                                         isActive: viewModel.spotActive[index],
                                         isEditing: viewModel.editingSpotIndex == index,
-                                        onTap: { viewModel.toggleSpotEffect(at: index) },
+                                        onTap: {
+                                        if viewModel.editingSpotIndex != nil {
+                                            viewModel.editSpotEffect(at: index)
+                                        } else {
+                                            viewModel.toggleSpotEffect(at: index)
+                                        }
+                                    },
                                         onSelect: { viewModel.selectSpotFile(at: index) },
                                         onClear: { viewModel.clearSpotEffect(at: index) },
                                         onEdit: { viewModel.editSpotEffect(at: index) },
@@ -292,7 +298,13 @@ struct MacMusicView: View {
                                         hasFile: viewModel.announcementHasFile[index],
                                         isActive: viewModel.announcementActive[index],
                                         isEditing: viewModel.editingSpotIndex == index + 4,
-                                        onTap: { viewModel.toggleAnnouncement(at: index) },
+                                        onTap: {
+                                        if viewModel.editingSpotIndex != nil {
+                                            viewModel.editSpotEffect(at: index + 4)
+                                        } else {
+                                            viewModel.toggleAnnouncement(at: index)
+                                        }
+                                    },
                                         onSelect: { viewModel.selectAnnouncementFile(at: index) },
                                         onClear: { viewModel.clearAnnouncement(at: index) },
                                         onEdit: { viewModel.editSpotEffect(at: index + 4) },
@@ -1102,7 +1114,8 @@ struct MacSpotWaveformTrimView: View {
             if let idx = viewModel.editingSpotIndex, idx < fx.show.spotEffects.count,
                fx.show.spotEffects[idx].isPlaying(), viewModel.spotFileDuration > 0 {
                 let pos = fx.show.spotEffects[idx].getPosition()
-                let posX = contentWidth * CGFloat(min(max(pos / viewModel.spotFileDuration, 0), 1))
+                let absPos = viewModel.spotInPoint + pos
+                let posX = contentWidth * CGFloat(min(max(absPos / viewModel.spotFileDuration, 0), 1))
                 Rectangle()
                     .fill(Color.green)
                     .frame(width: 2)
