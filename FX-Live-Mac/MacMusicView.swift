@@ -271,10 +271,9 @@ struct MacMusicView: View {
                                         isActive: viewModel.spotActive[index],
                                         isEditing: viewModel.editingSpotIndex == index,
                                         onTap: {
-                                        if viewModel.editingSpotIndex != nil {
+                                        viewModel.toggleSpotEffect(at: index)
+                                        if viewModel.editingSpotIndex != nil && viewModel.editingSpotIndex != index {
                                             viewModel.editSpotEffect(at: index)
-                                        } else {
-                                            viewModel.toggleSpotEffect(at: index)
                                         }
                                     },
                                         onSelect: { viewModel.selectSpotFile(at: index) },
@@ -299,10 +298,9 @@ struct MacMusicView: View {
                                         isActive: viewModel.announcementActive[index],
                                         isEditing: viewModel.editingSpotIndex == index + 4,
                                         onTap: {
-                                        if viewModel.editingSpotIndex != nil {
+                                        viewModel.toggleAnnouncement(at: index)
+                                        if viewModel.editingSpotIndex != nil && viewModel.editingSpotIndex != index + 4 {
                                             viewModel.editSpotEffect(at: index + 4)
-                                        } else {
-                                            viewModel.toggleAnnouncement(at: index)
                                         }
                                     },
                                         onSelect: { viewModel.selectAnnouncementFile(at: index) },
