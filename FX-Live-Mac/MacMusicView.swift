@@ -741,7 +741,7 @@ struct MacSpotPropertiesEditor: View {
                     }
                     
                     // Per-output volume trims when multiple outputs selected
-                    if selectedOutputs.count > 1 {
+                    if effect.allOutputs.count > 1 {
                         VStack(spacing: 4) {
                             HStack {
                                 Text("Output Trims")
@@ -758,7 +758,7 @@ struct MacSpotPropertiesEditor: View {
                                 .foregroundColor(.blue)
                             }
                             
-                            ForEach(selectedOutputs.sorted(), id: \.self) { busIndex in
+                            ForEach(effect.allOutputs.sorted(), id: \.self) { busIndex in
                                 HStack(spacing: 6) {
                                     Text(OutputBus.labelFor(busIndex))
                                         .font(.system(size: 10, weight: .medium, design: .monospaced))
